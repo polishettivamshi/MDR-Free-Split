@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: splitupi_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-splitupi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-splitupi_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-splitupi}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U splitupi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: splitupi_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: splitupi_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://splitupi:splitupi_secret@postgres:5432/splitupi
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-super_secret_splitupi_jwt_key_32chars_min}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-super_secret_splitupi_refresh_key_32chars}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      ENVIRONMENT: production
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: splitupi_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,11 @@
+{
+  "name": "SplitUPI",
+  "description": "Split your UPI payment into multiple payments. Create a payment plan and authorize each payment securely through your preferred UPI app.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
+

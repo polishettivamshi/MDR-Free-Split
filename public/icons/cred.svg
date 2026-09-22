@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#111111"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="#2A2A2A" stroke-width="1.5"/>
+  <g transform="translate(13, 11)">
+    <path d="M4 14V33H34V6H14L4 14Z" stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
+    <path d="M12 23L18 29L26 15" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="32" y="56" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="9" fill="#FFFFFF" text-anchor="middle" letter-spacing="2.5">CRED</text>
+</svg>
