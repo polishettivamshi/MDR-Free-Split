@@ -20,7 +20,6 @@ import {
   RotateCcw,
   Sparkles,
   Info,
-  SlidersHorizontal,
   X,
   FileText
 } from 'lucide-react';
@@ -295,23 +294,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
       setError('Failed to reset payment attempt.');
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  // Sandbox Developer Simulator for instantaneous testing in AI Studio
-  const handleSandboxSimulate = async (mode: 'AUTO_SUCCESS' | 'INSTANT_SUCCESS' | 'SIMULATE_FAILURE' | 'BANK_DOWNTIME') => {
-    try {
-      await fetch('/api/v1/mock/sandbox-control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode })
-      });
-      // Trigger status check immediately
-      if (activePayment) {
-        handleVerifyPaymentNow();
-      }
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -601,35 +583,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
       {/* Contextual Financial Partner Sponsored Banner */}
       <SponsoredAdCard placement="banner" selectedAdId="rupay-upi-offer" className="mb-6" />
-
-      {/* Developer Sandbox Testing Bar (Section 35) */}
-      <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-          <span className="font-bold text-slate-800">Developer Sandbox Switch:</span>
-          <span>Simulate provider responses for review</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={() => handleSandboxSimulate('INSTANT_SUCCESS')}
-            className="px-2.5 py-1 rounded bg-white hover:bg-emerald-50 text-emerald-700 font-bold border border-slate-200 shadow-2xs"
-          >
-            Instant Success
-          </button>
-          <button
-            onClick={() => handleSandboxSimulate('SIMULATE_FAILURE')}
-            className="px-2.5 py-1 rounded bg-white hover:bg-rose-50 text-rose-700 font-bold border border-slate-200 shadow-2xs"
-          >
-            Simulate Decline
-          </button>
-          <button
-            onClick={() => handleSandboxSimulate('BANK_DOWNTIME')}
-            className="px-2.5 py-1 rounded bg-white hover:bg-amber-50 text-amber-700 font-bold border border-slate-200 shadow-2xs"
-          >
-            Bank Downtime
-          </button>
-        </div>
-      </div>
 
       {/* ========================================================= */}
       {/* MODAL 1: Choose Your UPI App (Section 6 & 7 & 19)        */}

@@ -110,3 +110,59 @@ export interface ApiResponse<T = any> {
   data?: T;
   requestId: string;
 }
+
+export interface UPITaxCategory {
+  id: string;
+  name: string;
+  mccCodes: string[];
+  threshold: number;
+  interchangePercent: number;
+  gstPercent: number;
+  effectivePercent: number;
+  note: string;
+}
+
+export interface UPITaxRule {
+  effectiveDate: string;
+  lastUpdated: string;
+  authority: string;
+  currency: string;
+  exemptionThreshold: number;
+  baseInterchangeRatePercent: number;
+  gstRatePercent: number;
+  effectiveTaxRatePercent: number;
+  categories: UPITaxCategory[];
+  rules: {
+    underThresholdTax: number;
+    description: string;
+  };
+}
+
+export interface SplitOptionTaxComparison {
+  splitCount: number;
+  perInstallmentAmount: number;
+  isExempt: boolean;
+  totalTax: number;
+  savingsVsFull: number;
+  recommendationNote: string;
+}
+
+export interface UPITaxCalculationResult {
+  totalAmount: number;
+  exemptionThreshold: number;
+  effectiveTaxRatePercent: number;
+  singlePaymentTax: number;
+  singlePaymentExceeds: boolean;
+  installments: {
+    sequenceNumber: number;
+    amount: number;
+    exceedsThreshold: boolean;
+    taxAmount: number;
+    taxRatePercent: number;
+  }[];
+  totalSplitTax: number;
+  taxSaved: number;
+  isFullyExempt: boolean;
+  splitOptions: SplitOptionTaxComparison[];
+  recommendedSplitCount: number;
+}

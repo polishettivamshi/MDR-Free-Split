@@ -49,6 +49,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-1 lg:gap-2">
             <button
+              id="nav-scan-split-btn"
+              onClick={() => handleNav('create-split')}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                currentView === 'create-split' ? 'text-indigo-600 bg-indigo-50/70 font-bold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              }`}
+            >
+              <Smartphone className="w-4 h-4 text-indigo-600" />
+              <span>Scan & Split</span>
+            </button>
+            <button
               id="nav-landing-btn"
               onClick={() => handleNav('landing')}
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -65,15 +75,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
               How It Works
             </button>
             <button
-              id="nav-security-btn"
-              onClick={() => handleNav('security')}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                currentView === 'security' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-              }`}
-            >
-              Security
-            </button>
-            <button
               id="nav-dashboard-btn"
               onClick={() => handleNav('dashboard')}
               className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors ${
@@ -86,16 +87,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               )}
             </button>
-            <button
-              id="nav-admin-btn"
-              onClick={() => handleNav('admin')}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors ${
-                currentView === 'admin' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5 text-slate-600" />
-              <span>Admin</span>
-            </button>
           </nav>
 
           {/* Action CTA */}
@@ -105,8 +96,8 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
               onClick={() => handleNav('create-split')}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-300 hover:bg-indigo-700 active:scale-95 transition-all min-h-[42px] cursor-pointer"
             >
-              <span>Start a Split</span>
-              <ArrowRight className="w-4 h-4" />
+              <Smartphone className="w-4 h-4" />
+              <span>Scan QR & Split</span>
             </button>
           </div>
 
@@ -117,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
               onClick={() => handleNav('create-split')}
               className="inline-flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm active:scale-95 transition-all min-h-[40px] cursor-pointer"
             >
-              Start Split
+              Scan & Split
             </button>
             <button
               id="mobile-menu-toggle-btn"
@@ -135,21 +126,24 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white/98 backdrop-blur-md px-4 pt-3 pb-6 space-y-1.5 shadow-lg">
           <button
+            onClick={() => handleNav('create-split')}
+            className={`w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-between cursor-pointer ${
+              currentView === 'create-split' ? 'text-indigo-700 bg-indigo-100/80' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100/60'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-indigo-600" />
+              <span>Scan QR & Split</span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-indigo-600" />
+          </button>
+          <button
             onClick={() => handleNav('landing')}
             className={`w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2.5 cursor-pointer ${
               currentView === 'landing' ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
             <span>Overview</span>
-          </button>
-          <button
-            onClick={() => handleNav('create-split')}
-            className={`w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-between cursor-pointer ${
-              currentView === 'create-split' ? 'text-indigo-700 bg-indigo-100/80' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100/60'
-            }`}
-          >
-            <span>Start a Split</span>
-            <ArrowRight className="w-4 h-4 text-indigo-600" />
           </button>
           <button
             onClick={() => handleNav('dashboard')}
@@ -168,33 +162,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
             )}
           </button>
           <button
-            onClick={() => handleNav('admin')}
-            className={`w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2.5 cursor-pointer ${
-              currentView === 'admin' ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <Lock className="w-4 h-4 text-slate-500" />
-            <span>Admin & Audit Telemetry</span>
-          </button>
-          <button
             onClick={() => handleNav('how-it-works')}
             className="w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2.5 cursor-pointer"
           >
             <Smartphone className="w-4 h-4 text-slate-500" />
             <span>How It Works</span>
-          </button>
-          <button
-            onClick={() => handleNav('security')}
-            className="w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2.5 cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Security & Zero-PIN Policy</span>
-          </button>
-          <button
-            onClick={() => handleNav('terms')}
-            className="w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            Terms & Compliance
           </button>
         </div>
       )}

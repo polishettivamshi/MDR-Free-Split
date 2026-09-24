@@ -101,7 +101,7 @@ db.users.set(demoUserId, {
   name: 'Aarav Sharma',
   passwordHash: crypto.createHash('sha256').update('password123').digest('hex'),
   role: 'user',
-  createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
 });
 
@@ -113,92 +113,8 @@ db.users.set(adminUserId, {
   name: 'SplitUPI Admin',
   passwordHash: crypto.createHash('sha256').update('admin123').digest('hex'),
   role: 'admin',
-  createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+  createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
-});
-
-// Seed an initial demo split plan for instant exploration
-const samplePlanId = 'plan_init_001';
-const samplePlanPublicId = 'sp_' + crypto.randomUUID().slice(0, 8);
-db.splitPlans.set(samplePlanId, {
-  id: samplePlanId,
-  publicId: samplePlanPublicId,
-  userId: demoUserId,
-  merchantName: 'Croma Electronics',
-  merchantVpa: 'croma.retail@icici',
-  totalAmount: 14999,
-  currency: 'INR',
-  numberOfPayments: 3,
-  status: 'ACTIVE',
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  updatedAt: new Date().toISOString(),
-  expiresAt: new Date(Date.now() + 86400000 * 7).toISOString()
-});
-
-const item1Id = 'item_001';
-const item2Id = 'item_002';
-const item3Id = 'item_003';
-
-const pay1Id = 'pay_demo_01';
-const pay1PublicId = 'pay_' + crypto.randomUUID().slice(0, 8);
-db.payments.set(pay1Id, {
-  id: pay1Id,
-  publicId: pay1PublicId,
-  splitItemId: item1Id,
-  provider: 'mock_upi',
-  providerPaymentId: 'UPI_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-  transactionReference: 'SUP' + Math.floor(100000 + Math.random() * 900000),
-  amount: 5000,
-  currency: 'INR',
-  status: 'SUCCESS',
-  upiApp: 'phonepe',
-  initiatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  completedAt: new Date(Date.now() - 3600000 * 2 + 12000).toISOString(),
-  createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  updatedAt: new Date(Date.now() - 3600000 * 2 + 12000).toISOString()
-});
-
-db.splitItems.set(item1Id, {
-  id: item1Id,
-  splitPlanId: samplePlanId,
-  sequenceNumber: 1,
-  amount: 5000,
-  status: 'SUCCESS',
-  paymentId: pay1Id,
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  updatedAt: new Date(Date.now() - 3600000 * 2 + 12000).toISOString()
-});
-
-db.splitItems.set(item2Id, {
-  id: item2Id,
-  splitPlanId: samplePlanId,
-  sequenceNumber: 2,
-  amount: 5000,
-  status: 'NOT_STARTED',
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  updatedAt: new Date().toISOString()
-});
-
-db.splitItems.set(item3Id, {
-  id: item3Id,
-  splitPlanId: samplePlanId,
-  sequenceNumber: 3,
-  amount: 4999,
-  status: 'LOCKED',
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  updatedAt: new Date().toISOString()
-});
-
-// Seed an audit log
-db.auditLogs.push({
-  id: 'log_' + crypto.randomUUID().slice(0, 8),
-  userId: demoUserId,
-  action: 'SPLIT_PLAN_CREATED',
-  entityType: 'split_plan',
-  entityId: samplePlanId,
-  requestId: 'req_seed_001',
-  metadata: { totalAmount: 14999, merchant: 'Croma Electronics' },
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString()
 });
 
 // --- Configurable Supported UPI Apps List ---
@@ -516,6 +432,161 @@ async function startServer() {
     res.json({
       success: true,
       data: SUPPORTED_UPI_APPS,
+      requestId: (req as any).requestId
+    });
+  });
+
+  // --- Latest UPI Taxes & Surcharge Regulations API ---
+  const UPI_TAX_CONFIG = {
+    effectiveDate: '2026-04-01',
+    lastUpdated: '2026-09-22',
+    authority: 'NPCI Regulatory Circular & GST Council 9(5)',
+    currency: 'INR',
+    exemptionThreshold: 2000, // Transactions up to ₹2,000 are completely 0% surcharge exempt
+    baseInterchangeRatePercent: 1.1, // 1.1% interchange on P2M above ₹2,000
+    gstRatePercent: 18.0, // 18% GST on interchange
+    effectiveTaxRatePercent: 1.298, // 1.1 * 1.18 = 1.298%
+    categories: [
+      {
+        id: 'standard_retail',
+        name: 'General Retail & E-Commerce',
+        mccCodes: ['5311', '5411', '5999', '5732'],
+        threshold: 2000,
+        interchangePercent: 1.10,
+        gstPercent: 18.0,
+        effectivePercent: 1.298,
+        note: 'Standard merchant interchange on transactions above ₹2,000'
+      },
+      {
+        id: 'supermarket',
+        name: 'Supermarkets & Groceries',
+        mccCodes: ['5411', '5499'],
+        threshold: 2000,
+        interchangePercent: 0.90,
+        gstPercent: 18.0,
+        effectivePercent: 1.062,
+        note: 'Concessional grocery rate above ₹2,000'
+      },
+      {
+        id: 'fuel_transit',
+        name: 'Fuel & Transit Utilities',
+        mccCodes: ['5541', '4112', '4722'],
+        threshold: 2000,
+        interchangePercent: 0.50,
+        gstPercent: 18.0,
+        effectivePercent: 0.59,
+        note: 'Transit & fuel utility rate above ₹2,000'
+      }
+    ],
+    rules: {
+      underThresholdTax: 0,
+      description: 'Under NPCI regulations, UPI merchant transactions up to ₹2,000 are completely exempt from interchange surcharges and GST processing fees. Any payment exceeding ₹2,000 incurs 1.1% interchange + 18% GST (1.30% effective). By splitting bills so each installment stays at or below ₹2,000, users legally bypass transaction surcharges.'
+    }
+  };
+
+  // Helper: compute taxes for an amount and split breakdown
+  function computeUPITaxBreakdown(totalAmount: number, numberOfPayments: number, customAmounts?: number[]) {
+    const threshold = UPI_TAX_CONFIG.exemptionThreshold;
+    const rate = UPI_TAX_CONFIG.effectiveTaxRatePercent / 100;
+    const singlePaymentExceeds = totalAmount > threshold;
+    const singlePaymentTax = singlePaymentExceeds ? Math.round(totalAmount * rate * 100) / 100 : 0;
+
+    // Resolve installments
+    let amounts: number[] = [];
+    if (customAmounts && customAmounts.length === numberOfPayments) {
+      amounts = customAmounts;
+    } else {
+      const base = Math.floor(totalAmount / numberOfPayments);
+      const remainder = totalAmount - (base * numberOfPayments);
+      amounts = Array.from({ length: numberOfPayments }, (_, idx) => 
+        idx === numberOfPayments - 1 ? base + remainder : base
+      );
+    }
+
+    let totalSplitTax = 0;
+    const installments = amounts.map((amt, idx) => {
+      const exceeds = amt > threshold;
+      const taxAmount = exceeds ? Math.round(amt * rate * 100) / 100 : 0;
+      totalSplitTax += taxAmount;
+      return {
+        sequenceNumber: idx + 1,
+        amount: amt,
+        exceedsThreshold: exceeds,
+        taxAmount,
+        taxRatePercent: exceeds ? UPI_TAX_CONFIG.effectiveTaxRatePercent : 0
+      };
+    });
+
+    totalSplitTax = Math.round(totalSplitTax * 100) / 100;
+    const taxSaved = Math.max(0, Math.round((singlePaymentTax - totalSplitTax) * 100) / 100);
+    const isFullyExempt = totalSplitTax === 0;
+
+    // Generate comparison options for split counts 2 to 6
+    const splitOptions = [2, 3, 4, 5, 6].map(count => {
+      const perInstallment = Math.round((totalAmount / count) * 100) / 100;
+      const isExempt = perInstallment <= threshold;
+      const tax = isExempt ? 0 : Math.round(totalAmount * rate * 100) / 100;
+      const savings = Math.max(0, Math.round((singlePaymentTax - tax) * 100) / 100);
+      return {
+        splitCount: count,
+        perInstallmentAmount: perInstallment,
+        isExempt,
+        totalTax: tax,
+        savingsVsFull: savings,
+        recommendationNote: isExempt 
+          ? `0% Tax Free! (All installments ≤ ₹${threshold.toLocaleString('en-IN')})` 
+          : `Taxable (Each installment ₹${perInstallment.toLocaleString('en-IN')} > ₹${threshold.toLocaleString('en-IN')})`
+      };
+    });
+
+    // Determine optimal recommended split count to avoid tax
+    const minSplitsForExemption = Math.ceil(totalAmount / threshold);
+    const recommendedSplitCount = Math.max(2, Math.min(6, minSplitsForExemption));
+
+    return {
+      totalAmount,
+      exemptionThreshold: threshold,
+      effectiveTaxRatePercent: UPI_TAX_CONFIG.effectiveTaxRatePercent,
+      singlePaymentTax,
+      singlePaymentExceeds,
+      installments,
+      totalSplitTax,
+      taxSaved,
+      isFullyExempt,
+      splitOptions,
+      recommendedSplitCount
+    };
+  }
+
+  // GET /api/v1/upi-taxes - Returns regulatory tax rates and guidelines
+  app.get('/api/v1/upi-taxes', (req, res) => {
+    res.json({
+      success: true,
+      data: UPI_TAX_CONFIG,
+      requestId: (req as any).requestId
+    });
+  });
+
+  // POST /api/v1/upi-taxes/calculate - Computes tax impact and split savings dynamically
+  app.post('/api/v1/upi-taxes/calculate', (req, res) => {
+    const { totalAmount, numberOfPayments = 3, customAmounts } = req.body;
+    const amount = typeof totalAmount === 'number' ? totalAmount : parseFloat(totalAmount);
+
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_AMOUNT',
+        message: 'A valid totalAmount greater than 0 is required',
+        requestId: (req as any).requestId
+      });
+    }
+
+    const count = Math.max(2, Math.min(12, parseInt(numberOfPayments, 10) || 3));
+    const breakdown = computeUPITaxBreakdown(amount, count, customAmounts);
+
+    res.json({
+      success: true,
+      data: breakdown,
       requestId: (req as any).requestId
     });
   });

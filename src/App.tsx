@@ -10,9 +10,9 @@ import { LegalPages } from './components/LegalPages';
 import { SplitPlan } from './types';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<string>('landing');
+  const [currentView, setCurrentView] = useState<string>('create-split');
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [activeSplitsCount, setActiveSplitsCount] = useState<number>(1);
+  const [activeSplitsCount, setActiveSplitsCount] = useState<number>(0);
 
   // Fetch active splits count for badge
   useEffect(() => {
