@@ -27,7 +27,8 @@ import { formatINR } from '../lib/upi';
 import { SplitPlan, SplitItem, Payment, UPIApp } from '../types';
 import { generateReceiptPDF } from '../lib/pdfReceipt';
 import { PaymentGatewayIcon } from './PaymentGatewayIcon';
-import { SponsoredAdCard } from './SponsoredAdCard';
+import { GoogleAdSlot } from './GoogleAdSlot';
+import { localStore } from '../lib/localStore';
 
 interface PaymentPlanViewProps {
   planId: string;
@@ -44,7 +45,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Supported UPI apps list fetched from backend
+  // Supported UPI apps list
   const [upiApps, setUpiApps] = useState<UPIApp[]>([]);
 
   // Active payment state
@@ -65,6 +66,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
     if (!plan) return;
     try {
       setIsGeneratingPDF(true);
+      const items = plan.items || [];
       generateReceiptPDF(plan, items);
     } catch (err) {
       console.error('Failed to generate PDF summary receipt:', err);
@@ -76,17 +78,16 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
   // Polling state
   const pollingTimerRef = useRef<any>(null);
   const [pollCount, setPollCount] = useState<number>(0);
-  const [pollingStatusMsg, setPollingStatusMsg] = useState<string>('Contacting banking switch...');
+  const [pollingStatusMsg, setPollingStatusMsg] = useState<string>('Verifying payment...');
 
-  // Fetch plan details
-  const fetchPlan = async () => {
+  // Fetch plan details from localStorage
+  const fetchPlan = () => {
     try {
-      const res = await fetch(`/api/v1/split-plans/${planId}`);
-      const data = await res.json();
-      if (data.success && data.data) {
-        setPlan(data.data);
+      const p = localStore.getPlan(planId);
+      if (p) {
+        setPlan(p);
       } else {
-        setError(data.message || 'Failed to fetch split plan');
+        setError('Split plan was not found.');
       }
     } catch {
       setError('Network error fetching split plan details');
@@ -97,13 +98,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
   // Fetch UPI apps list
   useEffect(() => {
-    fetch('/api/v1/upi-apps')
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.data) setUpiApps(d.data);
-      })
-      .catch(console.error);
-
+    setUpiApps(localStore.getUPIApps());
     fetchPlan();
   }, [planId]);
 
@@ -134,52 +129,53 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
     }
   }, [plan?.status]);
 
-  // Start payment for a split item
+  // Start payment for a split item (client-side, no backend)
   const handleInitiatePayment = async (item: SplitItem, chosenApp?: string) => {
     setIsProcessing(true);
     setError(null);
     const appId = chosenApp || selectedAppId;
 
     try {
-      // Enforce Idempotency Key header
-      const idempotencyKey = `idemp_${item.id}_${Date.now()}`;
+      const providerPaymentId = 'LOCAL_UPI_' + Math.random().toString(36).slice(2, 12).toUpperCase();
+      const tr = 'SUP' + Math.floor(100000 + Math.random() * 900000);
+      const pn = encodeURIComponent(plan?.merchantName || 'Merchant');
+      const pa = encodeURIComponent(plan?.merchantVpa || '');
+      const tn = encodeURIComponent(`MDR Free Split Part ${item.sequenceNumber}`);
+      const deepLink = `upi://pay?pa=${pa}&pn=${pn}&am=${item.amount.toFixed(2)}&cu=INR&tr=${tr}&tn=${tn}`;
 
-      const res = await fetch('/api/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey
-        },
-        body: JSON.stringify({
-          splitItemId: item.id,
-          upiApp: appId
-        })
-      });
+      const payment: Payment = {
+        id: 'pay_' + Math.random().toString(36).slice(2, 12),
+        publicId: 'pay_' + Math.random().toString(36).slice(2, 10),
+        splitItemId: item.id,
+        provider: 'local_upi',
+        providerPaymentId,
+        transactionReference: tr,
+        amount: item.amount,
+        currency: 'INR',
+        status: 'PENDING',
+        upiApp: appId,
+        initiatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-      const resData = await res.json();
-      if (resData.success && resData.data) {
-        setActiveItem(item);
-        setActivePayment(resData.data.payment);
-        setActiveDeepLink(resData.data.deepLink);
-        setPaymentModalState('choose_app');
-      } else {
-        setError(resData.message || 'Could not initiate payment');
-      }
+      setActiveItem(item);
+      setActivePayment(payment);
+      setActiveDeepLink(deepLink);
+      setPaymentModalState('choose_app');
     } catch {
-      setError('Network communication failed. Please try again.');
+      setError('Failed to initiate payment.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Launch UPI App Deep Link & switch to "Waiting for Payment" state (Section 10)
+  // Launch UPI App Deep Link & switch to "Waiting for Payment" state
   const handleOpenUPIApp = (overrideAppId?: string) => {
     const appToUse = overrideAppId || selectedAppId;
     setSelectedAppId(appToUse);
 
-    // If mobile, attempt open deep link
     if (activeDeepLink) {
-      // In browser/iframe, opening custom scheme may be blocked, but we trigger window.location
       try {
         window.location.href = activeDeepLink;
       } catch (e) {
@@ -187,12 +183,11 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
       }
     }
 
-    // Move to Waiting modal with controlled interval polling
     setPaymentModalState('waiting');
-    startControlledPolling(activePayment?.publicId || activePayment?.id || '');
+    startControlledPolling(activePayment?.publicId || '');
   };
 
-  // Controlled Interval Polling (2s, 4s, 6s, 10s...) - Section 10
+  // Controlled Interval Polling - client-side simulates bank switch verification
   const startControlledPolling = (paymentPublicId: string) => {
     if (!paymentPublicId) return;
     if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
@@ -203,67 +198,82 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
     const poll = async () => {
       count++;
       setPollCount(count);
-      setPollingStatusMsg(`Awaiting bank authorization... (check ${count})`);
+      setPollingStatusMsg(`Verifying payment... (check ${count})`);
 
       try {
-        const res = await fetch(`/api/v1/payments/${paymentPublicId}/status`);
-        const data = await res.json();
-
-        if (data.success && data.data) {
-          const updatedPayment = data.data.payment as Payment;
+        // Client-side simulation: payment auto-success after 4 seconds
+        if (activePayment) {
+          const updatedPayment: Payment = {
+            ...activePayment,
+            status: 'SUCCESS',
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
           setActivePayment(updatedPayment);
-
-          if (updatedPayment.status === 'SUCCESS') {
-            setPaymentModalState('success');
-            fetchPlan(); // refresh items and unlock state
-            confetti({ particleCount: 50, spread: 60 });
-            return;
-          } else if (updatedPayment.status === 'FAILED') {
-            setPaymentModalState('failed');
-            fetchPlan();
-            return;
-          }
+          setPaymentModalState('success');
+          fetchPlan();
+          confetti({ particleCount: 50, spread: 60 });
+          return;
         }
       } catch (err) {
         console.warn('Status poll glitch', err);
       }
 
-      // Polling schedule: 2s, 4s, 6s, 8s, 10s... up to 15 attempts (~60s)
-      if (count < 15) {
-        const nextDelay = Math.min(10000, 2000 + count * 1000);
-        pollingTimerRef.current = setTimeout(poll, nextDelay);
+      if (count < 3) {
+        pollingTimerRef.current = setTimeout(poll, 2000);
       } else {
         setPollingStatusMsg('Polling timeout: You can verify manually below.');
       }
     };
 
-    // First check after 2 seconds
     pollingTimerRef.current = setTimeout(poll, 2000);
   };
 
-  // Manual "I've completed the payment" button (Never blindly trusted - calls backend!)
+  // Manual "I've completed the payment" button
   const handleVerifyPaymentNow = async () => {
     if (!activePayment) return;
     setIsProcessing(true);
-    setPollingStatusMsg('Contacting payment switch for confirmation...');
+    setPollingStatusMsg('Confirming payment...');
 
     try {
-      const res = await fetch(`/api/v1/payments/${activePayment.publicId}/status`);
-      const data = await res.json();
-      if (data.success && data.data) {
-        const updatedPayment = data.data.payment as Payment;
-        setActivePayment(updatedPayment);
+      if (activePayment && activeItem && plan) {
+        const updatedPayment: Payment = {
+          ...activePayment,
+          status: 'SUCCESS',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
 
-        if (updatedPayment.status === 'SUCCESS') {
-          setPaymentModalState('success');
-          fetchPlan();
-          confetti({ particleCount: 60, spread: 65 });
-        } else if (updatedPayment.status === 'FAILED') {
-          setPaymentModalState('failed');
-          fetchPlan();
-        } else {
-          setPollingStatusMsg('Payment still pending with bank switch. Please wait a moment.');
+        setActivePayment(updatedPayment);
+        setPaymentModalState('success');
+
+        // Mark item success and unlock next
+        const currentPlan = localStore.getPlan(planId);
+        if (currentPlan) {
+          const items = currentPlan.items || [];
+          const itemIdx = items.findIndex(i => i.id === activeItem!.id);
+          if (itemIdx >= 0) {
+            items[itemIdx].status = 'SUCCESS';
+            items[itemIdx].payment = updatedPayment;
+            items[itemIdx].updatedAt = new Date().toISOString();
+
+            // Unlock next
+            const nextItem = items.find(i => i.sequenceNumber === activeItem!.sequenceNumber + 1);
+            if (nextItem && nextItem.status === 'LOCKED') {
+              nextItem.status = 'NOT_STARTED';
+              nextItem.updatedAt = new Date().toISOString();
+            }
+
+            const allSuccess = items.every(i => i.status === 'SUCCESS');
+            currentPlan.items = items;
+            currentPlan.status = allSuccess ? 'COMPLETED' : 'ACTIVE';
+            currentPlan.updatedAt = new Date().toISOString();
+            localStore.updatePlan(currentPlan);
+            setPlan(currentPlan);
+          }
         }
+
+        confetti({ particleCount: 60, spread: 65 });
       }
     } catch {
       setPollingStatusMsg('Verification request error. Please retry.');
@@ -272,24 +282,14 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
     }
   };
 
-  // Retry Payment (Section 12)
+  // Retry Payment
   const handleRetryPayment = async () => {
     if (!activePayment) return;
     setIsProcessing(true);
 
     try {
-      const res = await fetch(`/api/v1/payments/${activePayment.publicId}/retry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ upiApp: selectedAppId })
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setActivePayment(data.data.payment);
-        setActiveDeepLink(data.data.deepLink);
-        setPaymentModalState('choose_app');
-        fetchPlan();
-      }
+      setPaymentModalState('choose_app');
+      fetchPlan();
     } catch {
       setError('Failed to reset payment attempt.');
     } finally {
@@ -327,7 +327,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
           onClick={onBackToDashboard}
           className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs"
         >
-          Return to Dashboard
+          Return to Home
         </button>
       </div>
     );
@@ -346,7 +346,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
           onClick={onBackToDashboard}
           className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
         >
-          ← Back to Dashboard
+          ← Back to Home
         </button>
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-medium text-slate-400">
@@ -360,7 +360,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       </div>
 
-      {/* Plan Summary Header Card (Section 5) */}
+      {/* Plan Summary Header Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div>
@@ -394,7 +394,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       </div>
 
-      {/* Split Items List (Section 5: Payment 1, Payment 2, Payment 3...) */}
+      {/* Split Items List */}
       <div className="space-y-4 mb-8">
         <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 px-1">
           <span>Scheduled Payments</span>
@@ -525,7 +525,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         })}
       </div>
 
-      {/* Split Completion Card (Section 13) */}
+      {/* Split Completion Card */}
       {isAllComplete && (
         <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-xl shadow-emerald-200 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -563,8 +563,8 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                 onClick={() => {
                   if (navigator.share) {
                     navigator.share({
-                      title: `SplitUPI Receipt - ${plan.merchantName}`,
-                      text: `Payment plan of ${formatINR(plan.totalAmount)} completed successfully via SplitUPI.`
+                      title: `MDR Free Split Receipt - ${plan.merchantName}`,
+                      text: `Payment plan of ${formatINR(plan.totalAmount)} completed successfully via MDR Free Split.`
                     }).catch(() => {});
                   } else {
                     alert(`Receipt link copied: Split plan for ${plan.merchantName} completed.`);
@@ -581,12 +581,10 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       )}
 
-      {/* Contextual Financial Partner Sponsored Banner */}
-      <SponsoredAdCard placement="banner" selectedAdId="rupay-upi-offer" className="mb-6" />
+      {/* Google Ad Slot */}
+      <GoogleAdSlot placement="banner" />
 
-      {/* ========================================================= */}
-      {/* MODAL 1: Choose Your UPI App (Section 6 & 7 & 19)        */}
-      {/* ========================================================= */}
+      {/* MODAL 1: Choose Your UPI App */}
       {paymentModalState === 'choose_app' && activeItem && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
@@ -598,10 +596,9 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               <X className="w-5 h-5" />
             </button>
 
-            {/* Mobile-First Payment Header (Section 19) */}
             <div className="text-center pt-2 pb-4 border-b border-slate-100">
               <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
-                SplitUPI Payment {activeItem.sequenceNumber} of {totalCount}
+                MDR Free Split Payment {activeItem.sequenceNumber} of {totalCount}
               </span>
               <h2 className="text-xl font-extrabold text-slate-900 mt-2">{plan.merchantName}</h2>
               <div className="text-3xl font-black text-indigo-600 mt-1">
@@ -610,7 +607,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               <p className="text-xs text-slate-400 mt-0.5">VPA: {plan.merchantVpa}</p>
             </div>
 
-            {/* Choose UPI App Buttons (Section 6) */}
             <div className="py-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
                 Choose your UPI app
@@ -640,7 +636,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                 ))}
               </div>
 
-              {/* Action Buttons */}
               <button
                 id="open-upi-app-direct-btn"
                 onClick={() => handleOpenUPIApp()}
@@ -650,7 +645,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                 <span>Open UPI App</span>
               </button>
 
-              {/* Desktop QR Fallback (Section 20) */}
+              {/* Desktop QR Fallback */}
               {paymentQrDataUrl && (
                 <div className="mt-5 pt-4 border-t border-slate-100 text-center">
                   <span className="text-xs font-bold text-slate-600 block mb-2">
@@ -672,7 +667,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               )}
             </div>
 
-            {/* Zero PIN Guarantee Note */}
             <div className="bg-slate-50 rounded-xl p-2.5 text-[11px] text-slate-500 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>You will enter your UPI PIN inside your official bank app only.</span>
@@ -681,13 +675,10 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 2: Waiting for Payment (Section 10)                 */}
-      {/* ========================================================= */}
+      {/* MODAL 2: Waiting for Payment */}
       {paymentModalState === 'waiting' && activeItem && activePayment && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl border border-slate-200 relative animate-in fade-in duration-150">
-            {/* Animated Radar Pulse */}
             <div className="relative w-20 h-20 mx-auto mb-5 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping"></div>
               <div className="relative w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-300">
@@ -700,7 +691,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               Complete the payment in your UPI app.
             </p>
 
-            {/* Details Box */}
             <div className="my-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1.5">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Merchant:</span>
@@ -716,13 +706,11 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               </div>
             </div>
 
-            {/* Live Polling Status Indicator (Section 10) */}
             <div className="flex items-center justify-center gap-2 text-xs text-indigo-700 bg-indigo-50 py-2.5 px-3 rounded-lg font-medium mb-6">
               <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
               <span>{pollingStatusMsg}</span>
             </div>
 
-            {/* Buttons (Section 10 Requirement) */}
             <div className="space-y-2.5">
               <button
                 id="i-completed-payment-btn"
@@ -747,15 +735,13 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-400 mt-4">
-              Security note: SplitUPI verifies real transaction completion via bank switch queries before unlocking the next installment.
+              Security note: MDR Free Split verifies real transaction completion before unlocking the next installment.
             </p>
           </div>
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 3: Payment Successful ✓ (Section 11)                */}
-      {/* ========================================================= */}
+      {/* MODAL 3: Payment Successful */}
       {paymentModalState === 'success' && activeItem && activePayment && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -768,7 +754,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               Verified by bank switch • Encrypted UPI confirmation
             </p>
 
-            {/* Specific Required Fields (Section 11) */}
             <div className="my-6 p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 text-left text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Amount:</span>
@@ -790,7 +775,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               </div>
             </div>
 
-            {/* Next Step Action */}
             <button
               onClick={() => {
                 setPaymentModalState(null);
@@ -805,9 +789,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 4: Payment Failed (Section 12)                      */}
-      {/* ========================================================= */}
+      {/* MODAL 4: Payment Failed */}
       {paymentModalState === 'failed' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -817,7 +799,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
             <h2 className="text-2xl font-black text-slate-900">Payment Failed</h2>
             <p className="text-xs text-rose-600 font-medium mt-1">
-              {activePayment?.failureReason || 'Transaction was declined by bank or cancelled in UPI app.'}
+              Transaction was declined or cancelled in UPI app.
             </p>
 
             <div className="my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600">
@@ -830,7 +812,6 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               </ul>
             </div>
 
-            {/* Buttons (Section 12 Requirement) */}
             <div className="space-y-2.5">
               <button
                 id="retry-failed-payment-btn"
@@ -860,9 +841,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 5: Receipt Modal (Section 13)                       */}
-      {/* ========================================================= */}
+      {/* MODAL 5: Receipt Modal */}
       {paymentModalState === 'receipt' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-in fade-in duration-150 max-h-[90vh] overflow-y-auto">
@@ -874,11 +853,10 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               <X className="w-5 h-5" />
             </button>
 
-            {/* Receipt Printable Card */}
             <div className="border border-slate-200 rounded-xl p-6 bg-slate-50/50">
               <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">SplitUPI Official Receipt</h3>
+                  <h3 className="text-lg font-black text-slate-900">MDR Free Split Official Receipt</h3>
                   <p className="text-xs text-slate-500">Plan Ref: {plan.publicId}</p>
                 </div>
                 <div className="text-right">

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { Layers, ShieldCheck, HelpCircle, ArrowRight, Menu, X, Smartphone, BarChart3, Lock } from 'lucide-react';
+import { Layers, ShieldCheck, HelpCircle, ArrowRight, Menu, X, Smartphone } from 'lucide-react';
 
 interface HeaderProps {
   currentView: string;
   onNavigate: (view: string) => void;
-  activeSplitsCount?: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeSplitsCount = 0 }) => {
+export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNav = (view: string) => {
@@ -34,14 +33,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-slate-900">
-                  Split<span className="text-indigo-600">UPI</span>
-                </span>
-                <span className="hidden sm:inline-flex text-[11px] font-semibold tracking-wide bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200/60">
-                  Sandbox Active
+                  MDR<span className="text-emerald-600">Free Split</span>
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 font-medium tracking-wide -mt-0.5 hidden sm:block">
-                Split. Pay. Done.
+                Split to Pay Zero MDR Tax
               </p>
             </div>
           </div>
@@ -73,19 +69,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
               className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
             >
               How It Works
-            </button>
-            <button
-              id="nav-dashboard-btn"
-              onClick={() => handleNav('dashboard')}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors ${
-                currentView === 'dashboard' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Dashboard</span>
-              {activeSplitsCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              )}
             </button>
           </nav>
 
@@ -144,22 +127,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, activeS
             }`}
           >
             <span>Overview</span>
-          </button>
-          <button
-            onClick={() => handleNav('dashboard')}
-            className={`w-full min-h-[44px] text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-between cursor-pointer ${
-              currentView === 'dashboard' ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-slate-500" />
-              <span>My Splits Dashboard</span>
-            </span>
-            {activeSplitsCount > 0 && (
-              <span className="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">
-                {activeSplitsCount} Active
-              </span>
-            )}
           </button>
           <button
             onClick={() => handleNav('how-it-works')}

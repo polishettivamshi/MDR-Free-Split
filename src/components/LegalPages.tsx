@@ -27,7 +27,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ page, onNavigate }) => {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">1. Nature of the Service</h2>
             <p>
-              SplitUPI provides a software interface for partial payment planning and coordination. SplitUPI is
+              MDR Free Split provides a software interface for partial payment planning and coordination. MDR Free Split is
               <strong> NOT a bank, non-banking financial company (NBFC), or licensed payment system operator</strong>.
               All payment transactions are initiated by users and authorized directly inside certified third-party UPI applications (e.g. PhonePe, Google Pay, Paytm, BHIM).
             </p>
@@ -36,14 +36,14 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ page, onNavigate }) => {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">2. Compliance & Anti-Evasion Policy (Section 36)</h2>
             <p className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-              <strong>Strict Compliance Mandate:</strong> SplitUPI does not advertise, support, or facilitate any activity intended to manipulate, bypass, evade, or circumvent payment-network merchant discount rate (MDR) fees, interchange fees, or banking controls. The split feature is strictly provided as a consumer budgeting and partial-payment scheduling aid.
+              <strong>Strict Compliance Mandate:</strong> MDR Free Split does not advertise, support, or facilitate any activity intended to manipulate, bypass, evade, or circumvent payment-network merchant discount rate (MDR) fees, interchange fees, or banking controls. The split feature is strictly provided as a consumer budgeting and partial-payment scheduling aid.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">3. User Responsibility & Authorization</h2>
             <p>
-              Each installment requires individual, explicit authorization by the user inside their respective UPI application using their private UPI PIN. SplitUPI cannot and will not automatically execute debits without user involvement.
+              Each installment requires individual, explicit authorization by the user inside their respective UPI application using their private UPI PIN. MDR Free Split cannot and will not automatically execute debits without user involvement.
             </p>
           </section>
 
@@ -65,7 +65,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ page, onNavigate }) => {
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
               <strong className="block font-bold">Zero Credential Collection Policy:</strong>
-              SplitUPI never requests, collects, views, or stores your UPI PIN, OTPs, net-banking passwords, or debit/credit card numbers.
+              MDR Free Split never requests, collects, views, or stores your UPI PIN, OTPs, net-banking passwords, or debit/credit card numbers.
             </div>
           </div>
 
@@ -136,14 +136,14 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ page, onNavigate }) => {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">1. Cancellations</h2>
             <p>
-              Users may cancel an active split plan at any time prior to initiating an installment. Payments that have already been authorized and settled to the merchant cannot be cancelled unilaterally through SplitUPI.
+              Users may cancel an active split plan at any time prior to initiating an installment. Payments that have already been authorized and settled to the merchant cannot be cancelled unilaterally through MDR Free Split.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900">2. Merchant Returns & Refunds</h2>
             <p>
-              Because SplitUPI coordinates payments directed straight to the merchant's UPI address, any return or merchandise refund must be requested directly from the merchant. Refunds will be credited back to your original bank account according to UPI return protocols.
+              Because MDR Free Split coordinates payments directed straight to the merchant's UPI address, any return or merchandise refund must be requested directly from the merchant. Refunds will be credited back to your original bank account according to UPI return protocols.
             </p>
           </section>
         </div>
@@ -158,7 +158,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ page, onNavigate }) => {
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <Mail className="w-5 h-5 text-indigo-600 mb-2" />
               <h4 className="font-bold text-slate-900 text-xs">Email Support</h4>
-              <p className="text-xs text-slate-500 mt-1">support@splitupi.dev</p>
+              <p className="text-xs text-slate-500 mt-1">support@mdfreesplit.dev</p>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <Phone className="w-5 h-5 text-indigo-600 mb-2" />

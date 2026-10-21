@@ -3,7 +3,7 @@ import { SplitPlan, SplitItem } from '../types';
 
 /**
  * Generates and downloads a clean, professional PDF summary receipt
- * for a completed SplitUPI payment plan using jsPDF.
+ * for a completed MDR Free Split payment plan using jsPDF.
  */
 export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): void {
   const doc = new jsPDF({
@@ -25,7 +25,7 @@ export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(255, 255, 255);
-  doc.text('SplitUPI', leftMargin, 16);
+  doc.text('MDR Free Split', leftMargin, 16);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -244,9 +244,9 @@ export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): vo
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
   const complianceText = 
-    '1. SplitUPI strictly abides by NPCI and RBI security standards. The user authorized each installment directly ' +
+    '1. MDR Free Split strictly abides by NPCI and RBI security standards. The user authorized each installment directly ' +
     'within their certified UPI application (PhonePe, Google Pay, Paytm, BHIM, etc.) using their private UPI PIN.\n' +
-    '2. SplitUPI never collected, viewed, or stored the user\'s UPI PIN, bank credentials, card numbers, or OTPs.\n' +
+    '2. MDR Free Split never collected, viewed, or stored the user\'s UPI PIN, bank credentials, card numbers, or OTPs.\n' +
     '3. All payments were verified through banking switch queries and cryptographic webhook telemetry.';
   
   doc.text(complianceText, leftMargin + 6, securityTop + 12, { maxWidth: contentWidth - 12 });
@@ -260,10 +260,10 @@ export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): vo
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
-  doc.text('SplitUPI • Computer-generated payment plan receipt • Verification ID: ' + (plan.publicId || plan.id), leftMargin, footerY);
+  doc.text('MDR Free Split • Computer-generated payment plan receipt • Verification ID: ' + (plan.publicId || plan.id), leftMargin, footerY);
   doc.text('Page 1 of 1', rightMargin, footerY, { align: 'right' });
 
   // 8. Download the PDF
-  const filename = `SplitUPI_Receipt_${plan.publicId || plan.id || 'plan'}.pdf`;
+  const filename = `MDR Free Split_Receipt_${plan.publicId || plan.id || 'plan'}.pdf`;
   doc.save(filename);
 }

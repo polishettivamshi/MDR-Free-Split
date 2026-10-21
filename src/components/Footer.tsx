@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, QrCode, BarChart3, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Layers, QrCode, HelpCircle, CheckCircle2 } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-white text-base font-extrabold tracking-tight">SplitUPI</span>
+                <span className="text-white text-base font-extrabold tracking-tight">MDR<span className="text-emerald-400">Free Split</span></span>
                 <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/60 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   0% Tax Exemption Engine
@@ -41,14 +41,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </button>
             <button
               type="button"
-              onClick={() => onNavigate('dashboard')}
-              className="text-slate-300 hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              type="button"
               onClick={() => onNavigate('how-it-works')}
               className="text-slate-300 hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
             >
@@ -61,10 +53,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Minimal Regulatory Line */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 text-slate-500 text-[11px]">
           <p className="text-center sm:text-left">
-            Under NPCI guidelines, merchant transactions up to ₹2,000 are 0% surcharge exempt. SplitUPI coordinates payments via verified UPI deep-links.
+            Under NPCI guidelines, merchant transactions up to ₹2,000 are 0% surcharge exempt. MDR Free Split coordinates payments via verified UPI deep-links.
           </p>
           <div className="flex items-center gap-3 shrink-0">
-            <span>© {new Date().getFullYear()} SplitUPI</span>
+            <span>© {new Date().getFullYear()} MDR Free Split</span>
             <span className="w-1 h-1 rounded-full bg-slate-700" />
             <span className="text-emerald-500 font-semibold flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" /> Zero PIN Stored

@@ -131,6 +131,8 @@ export interface UPITaxRule {
   baseInterchangeRatePercent: number;
   gstRatePercent: number;
   effectiveTaxRatePercent: number;
+  mdrCapAmount?: number;
+  mdrCapThreshold?: number;
   categories: UPITaxCategory[];
   rules: {
     underThresholdTax: number;

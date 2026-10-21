@@ -12,7 +12,7 @@ import {
   Store, 
   IndianRupee, 
   Edit3, 
-  Sliders, 
+  Sliders,
   Sparkles,
   X,
   FileImage,
@@ -23,9 +23,10 @@ import {
 import { parseUPIUri, formatINR } from '../lib/upi';
 import { ParsedUPI, SplitPlan } from '../types';
 import { PaymentGatewayIcon } from './PaymentGatewayIcon';
-import { SponsoredAdCard } from './SponsoredAdCard';
+import { GoogleAdSlot } from './GoogleAdSlot';
 import { CameraQRScanner } from './CameraQRScanner';
 import { UPITaxAdvisor } from './UPITaxAdvisor';
+import { localStore } from '../lib/localStore';
 
 interface CreateSplitProps {
   onPlanCreated: (plan: SplitPlan) => void;
@@ -37,7 +38,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [amountInputStr, setAmountInputStr] = useState<string>('');
   const [qrMethod, setQrMethod] = useState<'scan' | 'upload' | 'manual'>('scan');
-  
+   
   // Scan notification state
   const [scanSuccessNotification, setScanSuccessNotification] = useState<{
     merchant: string;
@@ -79,6 +80,17 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     result.push(last);
     return result;
   };
+
+  // MDR calculation per 2026 UPI framework: 0.4% above ₹2,000, capped at ₹300 for ₹75,000+
+  const THRESHOLD = 2000;
+  const RATE = 0.004;
+  const MDR_CAP = 300;
+  const MDR_CAP_THRESHOLD = 75000;
+  function computeMDR(amount: number): number {
+    if (amount <= THRESHOLD) return 0;
+    const tax = amount * RATE;
+    return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(tax * 100) / 100;
+  }
 
   // Keep splits updated when total or count changes (if equal mode)
   useEffect(() => {
@@ -163,7 +175,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     setSplitAmounts(updated);
   };
 
-  // Create Split Plan Submission
+  // Create Split Plan Submission (client-side localStorage storage)
   const handleSubmitPlan = async () => {
     if (!isSplitValid) {
       setApiError('The sum of all split amounts must match the total amount exactly.');
@@ -178,26 +190,26 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     setApiError(null);
 
     try {
-      const response = await fetch('/api/v1/split-plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          merchantName: parsedUPI.pn || 'Merchant Store',
-          merchantVpa: parsedUPI.pa,
-          totalAmount: totalAmount,
-          numberOfPayments: numberOfPayments,
-          customAmounts: splitAmounts
-        })
+      const numSplits = numberOfPayments < 2 ? 2 : numberOfPayments;
+      const plan = localStore.createPlan({
+        merchantName: parsedUPI.pn || 'Merchant Store',
+        merchantVpa: parsedUPI.pa,
+        totalAmount,
+        numberOfPayments: numSplits,
+        items: splitAmounts.map((amt, idx) => ({
+          id: 'item_' + Math.random().toString(36).slice(2, 14),
+          splitPlanId: 'temp',
+          sequenceNumber: idx + 1,
+          amount: amt,
+          status: idx === 0 ? 'NOT_STARTED' : 'LOCKED',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }))
       });
 
-      const resData = await response.json();
-      if (resData.success && resData.data) {
-        onPlanCreated(resData.data);
-      } else {
-        setApiError(resData.message || 'Failed to create split plan');
-      }
+      onPlanCreated(plan);
     } catch (err: any) {
-      setApiError('Network connection error. Please try again.');
+      setApiError('Failed to create split plan. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -310,40 +322,43 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             </div>
 
             {/* QR Method Tabs */}
-            <div className="flex w-full sm:w-auto p-1 bg-slate-100 rounded-xl text-xs font-bold">
+            <div className="flex w-full sm:w-auto p-1 bg-slate-100 rounded-xl text-xs font-bold sm:flex-nowrap flex-wrap">
               <button
                 id="qr-tab-scan-btn"
                 type="button"
                 onClick={() => setQrMethod('scan')}
-                className={`flex-1 sm:flex-none px-3.5 py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] flex items-center justify-center gap-1.5 ${
+                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
                   qrMethod === 'scan' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Scan Camera</span>
+                <span className="hidden sm:inline">Scan Camera</span>
+                <span className="inline sm:hidden">Scan</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </button>
               <button
                 id="qr-tab-upload-btn"
                 type="button"
                 onClick={() => setQrMethod('upload')}
-                className={`flex-1 sm:flex-none px-3.5 py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] flex items-center justify-center gap-1.5 ${
+                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
                   qrMethod === 'upload' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>Upload QR</span>
+                <span className="hidden sm:inline">Upload QR</span>
+                <span className="inline sm:hidden">Upload</span>
               </button>
               <button
                 id="qr-tab-manual-btn"
                 type="button"
                 onClick={() => setQrMethod('manual')}
-                className={`flex-1 sm:flex-none px-3.5 py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] flex items-center justify-center gap-1.5 ${
+                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
                   qrMethod === 'manual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>Manual Input</span>
+                <span className="hidden sm:inline">Manual Input</span>
+                <span className="inline sm:hidden">Manual</span>
               </button>
             </div>
           </div>
@@ -527,8 +542,8 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 </div>
               );
             }
-            const singleExceeds = totalAmount > 2000;
-            const singleTax = singleExceeds ? Math.round(totalAmount * 0.01298 * 100) / 100 : 0;
+            const singleExceeds = totalAmount > THRESHOLD;
+            const singleTax = computeMDR(totalAmount);
             return (
               <div className={`mt-4 p-4 rounded-xl border transition-all ${
                 singleExceeds
@@ -552,20 +567,20 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                             ? 'bg-amber-200 text-amber-900 border border-amber-300'
                             : 'bg-emerald-200 text-emerald-900 border border-emerald-300'
                         }`}>
-                          {singleExceeds ? `1.30% Taxable (~${formatINR(singleTax)})` : '0.00% Zero Tax (₹0.00)'}
+                          {singleExceeds ? `0.40% Taxable MDR (~${formatINR(singleTax)})` : '0.00% Zero MDR (₹0.00)'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                         {singleExceeds ? (
                           <>
-                            Under NPCI regulations, single merchant transactions above ₹2,000 incur <strong>1.10% interchange + 18% GST (1.30% effective)</strong>. 
+                            Under the 2026 UPI MDR framework, merchant transactions above ₹2,000 incur <strong>0.4% MDR (capped at ₹300 for ₹75,000+)</strong>. MDR is paid by the merchant, not the customer.
                             <span className="block text-indigo-700 font-bold mt-0.5">
-                              ⚡ Split this bill into installments below to bring each installment ≤ ₹2,000 and eliminate this tax!
+                              ⚡ Split this bill into installments below to bring each installment ≤ ₹2,000 and keep it tax-free!
                             </span>
                           </>
                         ) : (
                           <>
-                            This amount is ≤ ₹2,000, which qualifies for <strong>0% Surcharge Exemption</strong> under NPCI rules.
+                            This amount is ≤ ₹2,000, which qualifies for <strong>0% MDR Exemption</strong> under UPI rules.
                           </>
                         )}
                       </p>
@@ -620,56 +635,58 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             </div>
           </div>
 
-          {/* Payment Count Options (2, 3, 4, 5, Custom) */}
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-3 mb-6">
-            {[2, 3, 4, 5].map((count) => {
+          {/* Payment Count Options */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 sm:gap-2 mb-6">
+            {[2, 3, 4, 5, 6, 8, 10, 12].map((count) => {
               const perSplit = totalAmount / count;
-              const isExempt = perSplit <= 2000;
+              const isExempt = perSplit <= THRESHOLD;
               return (
                 <button
                   key={count}
                   type="button"
                   onClick={() => setNumberOfPayments(count)}
-                  className={`py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl text-center border font-extrabold text-xs sm:text-sm transition-all cursor-pointer min-h-[52px] flex flex-col items-center justify-center relative ${
+                  className={`py-2 px-1 sm:px-1.5 rounded-lg text-center border font-bold text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] sm:min-h-[52px] flex flex-col items-center justify-center relative ${
                     numberOfPayments === count
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm scale-[1.02]'
                       : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <span className="block sm:hidden">{count}x</span>
-                  <span className="hidden sm:block">{count} Payments</span>
-                  <span className={`text-[9px] font-bold mt-0.5 ${
-                    numberOfPayments === count 
+                  <span className="block text-[10px] sm:text-xs">{count}x</span>
+                  <span className={`text-[8px] sm:text-[9px] font-bold mt-0.5 ${
+                    numberOfPayments === count
                       ? isExempt ? 'text-emerald-200' : 'text-amber-200'
                       : isExempt ? 'text-emerald-600' : 'text-slate-400'
                   }`}>
-                    {isExempt ? '0% Tax' : 'Taxable'}
+                    {isExempt ? '0% MDR' : 'MDR'}
                   </span>
                 </button>
               );
             })}
             {/* Custom Count Stepper */}
-            <div className={`p-1.5 sm:p-2 rounded-xl border flex flex-col items-center justify-center min-h-[52px] ${numberOfPayments > 5 ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 bg-white'}`}>
-              <span className="text-[10px] font-bold text-slate-500 uppercase">Custom</span>
+            <div className={`p-1 sm:p-1.5 rounded-lg border flex flex-col items-center justify-center min-h-[44px] sm:min-h-[52px] ${numberOfPayments > 12 ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 bg-white'}`}>
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Custom</span>
               <div className="flex items-center gap-1 mt-0.5">
                 <button
                   type="button"
                   onClick={() => setNumberOfPayments(Math.max(2, numberOfPayments - 1))}
-                  className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                  className="w-5 sm:w-6 h-5 sm:h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
                   aria-label="Decrease payments"
                 >
                   -
                 </button>
-                <span className="text-xs font-bold text-slate-900 w-4 text-center">{numberOfPayments}</span>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 w-4 sm:w-5 text-center">{numberOfPayments}</span>
                 <button
                   type="button"
-                  onClick={() => setNumberOfPayments(Math.min(12, numberOfPayments + 1))}
-                  className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                  onClick={() => setNumberOfPayments(numberOfPayments + 1)}
+                  className="w-5 sm:w-6 h-5 sm:h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
                   aria-label="Increase payments"
                 >
                   +
                 </button>
               </div>
+              <p className="text-[8px] sm:text-[9px] text-slate-500 mt-0.5">
+                Max {Math.ceil(totalAmount / THRESHOLD)} for 0% MDR
+              </p>
             </div>
           </div>
 
@@ -694,8 +711,8 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               </div>
             ) : (
               splitAmounts.map((amt, idx) => {
-                const exceedsThreshold = amt > 2000;
-                const instTax = exceedsThreshold ? Math.round(amt * 0.01298 * 100) / 100 : 0;
+                const exceedsThreshold = amt > THRESHOLD;
+                const instTax = computeMDR(amt);
                 return (
                   <div
                     key={idx}
@@ -710,16 +727,16 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                           <span className="text-sm font-bold text-slate-900">Payment {idx + 1}</span>
                           {exceedsThreshold ? (
                             <span className="text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
-                              1.30% Taxable (~{formatINR(instTax)})
+                              0.40% Taxable MDR (~{formatINR(instTax)})
                             </span>
                           ) : (
                             <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> 0.00% Zero Tax Free
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> 0.00% Zero MDR
                             </span>
                           )}
                         </div>
                         <span className="block text-[11px] text-slate-500 mt-0.5">
-                          {idx === 0 ? 'Due Immediately' : 'Unlocks sequentially'} • {exceedsThreshold ? 'Exceeds ₹2,000 threshold' : 'Under ₹2,000 statutory limit'}
+                          {idx === 0 ? 'Due Immediately' : 'Unlocks sequentially'} • {exceedsThreshold ? 'Exceeds ₹2,000 MDR threshold' : 'Under ₹2,000 MDR-exempt'}
                         </span>
                       </div>
                     </div>
@@ -742,7 +759,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                         <div className="text-right">
                           <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
                           <span className={`text-[10px] font-extrabold ${exceedsThreshold ? 'text-amber-700' : 'text-emerald-700'}`}>
-                            Tax: {exceedsThreshold ? `1.30% (${formatINR(instTax)})` : '₹0.00 (0%)'}
+                            MDR: {exceedsThreshold ? `0.40% (${formatINR(instTax)})` : '₹0.00 (0%)'}
                           </span>
                         </div>
                       )}
@@ -811,8 +828,8 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             </div>
           </div>
 
-          {/* Contextual Sponsored Ad Offer */}
-          <SponsoredAdCard placement="compact" selectedAdId="rupay-upi-offer" />
+          {/* Contextual Sponsored Ad Slot */}
+          <GoogleAdSlot placement="compact" />
         </div>
 
         {/* Action Button Footer */}
