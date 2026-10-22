@@ -12,13 +12,12 @@ import {
   Store, 
   IndianRupee, 
   Edit3, 
-  Sliders,
   Sparkles,
   X,
-  FileImage,
   QrCode,
   Percent,
-  TrendingDown
+  TrendingDown,
+  Info
 } from 'lucide-react';
 import { parseUPIUri, formatINR } from '../lib/upi';
 import { ParsedUPI, SplitPlan } from '../types';
@@ -31,6 +30,17 @@ import { localStore } from '../lib/localStore';
 interface CreateSplitProps {
   onPlanCreated: (plan: SplitPlan) => void;
   onCancel: () => void;
+}
+
+const THRESHOLD = 2000;
+const RATE = 0.004;
+const MDR_CAP = 300;
+const MDR_CAP_THRESHOLD = 75000;
+
+function computeMDR(amount: number): number {
+  if (amount <= THRESHOLD) return 0;
+  const tax = amount * RATE;
+  return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(tax * 100) / 100;
 }
 
 export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCancel }) => {
@@ -47,7 +57,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     note?: string;
   } | null>(null);
 
-  // Decoded merchant information (unpopulated until scan/input)
+  // Decoded merchant information
   const [parsedUPI, setParsedUPI] = useState<ParsedUPI>({
     pa: '',
     pn: '',
@@ -56,7 +66,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     isValid: false,
     validationErrors: []
   });
-  const [merchantConfirmed, setMerchantConfirmed] = useState<boolean>(false);
 
   // Step 2: Split configuration
   const [numberOfPayments, setNumberOfPayments] = useState<number>(3);
@@ -80,17 +89,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     result.push(last);
     return result;
   };
-
-  // MDR calculation per 2026 UPI framework: 0.4% above ₹2,000, capped at ₹300 for ₹75,000+
-  const THRESHOLD = 2000;
-  const RATE = 0.004;
-  const MDR_CAP = 300;
-  const MDR_CAP_THRESHOLD = 75000;
-  function computeMDR(amount: number): number {
-    if (amount <= THRESHOLD) return 0;
-    const tax = amount * RATE;
-    return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(tax * 100) / 100;
-  }
 
   // Keep splits updated when total or count changes (if equal mode)
   useEffect(() => {
@@ -135,7 +133,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     setParsedUPI(parsed);
     if (parsed.isValid) {
       setApiError(null);
-      setMerchantConfirmed(true);
       if (parsed.am && parsed.am > 0) {
         setTotalAmount(parsed.am);
         setAmountInputStr(parsed.am.toString());
@@ -146,7 +143,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
         amount: parsed.am,
         note: parsed.tn
       });
-      // Switch to manual mode so user can review the verified details
       setQrMethod('manual');
     } else {
       setApiError(parsed.validationErrors.join(', '));
@@ -215,167 +211,153 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     }
   };
 
+  const singleTax = computeMDR(totalAmount);
+  const singleExceeds = totalAmount > THRESHOLD;
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      {/* Top Header Card */}
-      <div className="mb-8">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10 lg:py-16">
+      {/* Back & Header */}
+      <div className="mb-10 reveal stagger-1">
         <button
           onClick={onCancel}
-          className="text-xs font-bold text-slate-500 hover:text-slate-800 mb-3 flex items-center gap-1 cursor-pointer"
+          className="interactive inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors duration-200"
         >
-          ← Back to overview
+          <ArrowRight className="w-3.5 h-3.5 -rotate-180" />
+          <span>Back to Home</span>
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
-            Live UPI Tax Engine
+      </div>
+
+      <div className="reveal stagger-2">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold tracking-wider uppercase border border-indigo-100">
+            <ShieldCheck className="w-3 h-3" />
+            <span>Zero MDR Tax Engine</span>
           </span>
           <span className="text-xs text-slate-400">• Step 1 of 2</span>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">
           Scan & Split UPI
         </h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Scan any merchant QR code to see the current UPI tax percentage on that amount. Split the amount into installments to eliminate surcharges with 0% tax exemption.
+        <p className="text-sm text-slate-600">
+          Scan any merchant QR code, split the amount into installments under ₹2,000 each to pay 0% MDR tax.
         </p>
       </div>
 
+      {/* Error Banner */}
       {apiError && (
-        <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-bold text-rose-900">Validation Notice</h4>
-            <p className="text-rose-700 text-xs mt-0.5">{apiError}</p>
+        <div className="mb-8 reveal stagger-3">
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-rose-900 mb-0.5">Validation Notice</h4>
+              <p className="text-rose-700 text-xs">{apiError}</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Main Configuration Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-        {/* Section 1: Merchant UPI QR Scanner */}
-        <div className="p-6 sm:p-8">
-          {/* Scan Success Banner */}
-          {scanSuccessNotification && (
-            <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-800">
-                      Merchant QR Scanned & Details Pre-filled!
-                    </span>
-                    <span className="text-[10px] font-bold bg-emerald-200/90 text-emerald-900 px-2 py-0.5 rounded-full">
-                      Auto-filled
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900 mt-0.5">
-                    {scanSuccessNotification.merchant}
-                  </h4>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 mt-1">
-                    <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-200 font-bold text-emerald-800 text-[11px]">
-                      {scanSuccessNotification.vpa}
-                    </span>
-                    {scanSuccessNotification.amount && (
-                      <span className="font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded text-[11px]">
-                        Bill: {formatINR(scanSuccessNotification.amount)}
-                      </span>
-                    )}
-                    {scanSuccessNotification.note && (
-                      <span className="text-slate-500 italic text-[11px]">
-                        "{scanSuccessNotification.note}"
-                      </span>
-                    )}
-                  </div>
-                </div>
+      {/* Main Card */}
+      <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-xl reveal stagger-4">
+        
+        {/* Scan Success Banner */}
+        {scanSuccessNotification && (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  Merchant Scanned
+                </span>
+                <span className="text-[10px] font-bold bg-white px-1.5 py-0.5 rounded text-emerald-600 border border-emerald-200">
+                  Auto-filled
+                </span>
               </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setQrMethod('scan')}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 hover:border-indigo-300 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  Scan Again
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScanSuccessNotification(null)}
-                  className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-                  title="Dismiss alert"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <h4 className="font-bold text-sm text-slate-900 mb-1">{scanSuccessNotification.merchant}</h4>
+              <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                  {scanSuccessNotification.vpa}
+                </span>
+                {scanSuccessNotification.amount && (
+                  <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                    Bill: {formatINR(scanSuccessNotification.amount)}
+                  </span>
+                )}
               </div>
             </div>
-          )}
+            <div className="flex items-end gap-2">
+              <button
+                onClick={() => setQrMethod('scan')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 hover:border-indigo-300 transition-colors"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span className="ml-1">Scan Again</span>
+              </button>
+              <button
+                onClick={() => setScanSuccessNotification(null)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        {/* Section 1: Merchant QR */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                 1. Scan Merchant UPI QR Code
               </label>
-              <p className="text-xs text-slate-500">
-                Point your camera at any merchant counter QR or upload an image to pre-fill details.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Point your camera or upload an image to pre-fill details.
               </p>
             </div>
+          </div>
 
-            {/* QR Method Tabs */}
-            <div className="flex w-full sm:w-auto p-1 bg-slate-100 rounded-xl text-xs font-bold sm:flex-nowrap flex-wrap">
-              <button
-                id="qr-tab-scan-btn"
-                type="button"
-                onClick={() => setQrMethod('scan')}
-                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
-                  qrMethod === 'scan' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">Scan Camera</span>
-                <span className="inline sm:hidden">Scan</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              </button>
-              <button
-                id="qr-tab-upload-btn"
-                type="button"
-                onClick={() => setQrMethod('upload')}
-                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
-                  qrMethod === 'upload' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Upload QR</span>
-                <span className="inline sm:hidden">Upload</span>
-              </button>
-              <button
-                id="qr-tab-manual-btn"
-                type="button"
-                onClick={() => setQrMethod('manual')}
-                className={`flex-1 sm:flex-none px-3 sm:px-3.5 py-2 sm:py-2 rounded-lg transition-colors cursor-pointer text-center min-h-[36px] sm:min-h-auto flex items-center justify-center gap-1.5 ${
-                  qrMethod === 'manual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Manual Input</span>
-                <span className="inline sm:hidden">Manual</span>
-              </button>
-            </div>
+          {/* QR Method Tabs */}
+          <div className="flex p-1 bg-slate-100 rounded-2xl text-xs font-bold sm:flex-nowrap flex-wrap">
+            {['scan', 'upload', 'manual'].map((method) => {
+              const labels: Record<string, { icon: any; label: string }> = {
+                scan: { icon: Camera, label: 'Scan Camera' },
+                upload: { icon: Upload, label: 'Upload QR' },
+                manual: { icon: Edit3, label: 'Manual Input' }
+              };
+              const { icon: Icon, label } = labels[method];
+              return (
+                <button
+                  key={method}
+                  onClick={() => setQrMethod(method as 'scan' | 'upload' | 'manual')}
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl transition-all duration-200 cursor-pointer text-center min-h-[38px] sm:min-h-auto flex items-center justify-center gap-2 ${
+                    qrMethod === method
+                      ? 'bg-white text-indigo-600 shadow-sm border border-indigo-200'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent border'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${qrMethod === method ? 'text-indigo-600' : 'text-slate-400'}`} />
+                  <span className={qrMethod === 'manual' && method === 'manual' ? 'block' : 'hidden sm:inline'}>{label}</span>
+                  <span className={qrMethod === 'manual' && method === 'manual' ? 'inline sm:hidden' : 'hidden'}>{label === 'Manual Input' ? 'Manual' : label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Camera Scan Mode */}
           {qrMethod === 'scan' && (
-            <div className="mb-4">
+            <div className="mt-4">
               <CameraQRScanner
                 onScan={(raw, parsed) => handleScannedData(raw, parsed)}
                 onClose={() => setQrMethod('manual')}
+                className="max-h-[400px]"
               />
             </div>
           )}
 
           {/* Upload Mode */}
           {qrMethod === 'upload' && (
-            <div className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-6 text-center transition-colors bg-slate-50/50 mb-4">
+            <div className="mt-4 border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer group">
               <input
                 id="qr-image-file-input"
                 type="file"
@@ -383,18 +365,15 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <label
-                htmlFor="qr-image-file-input"
-                className="cursor-pointer flex flex-col items-center justify-center"
-              >
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+              <label className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <Upload className="w-6 h-6" />
                 </div>
-                <span className="text-sm font-bold text-slate-800">
-                  Click to upload merchant QR screenshot or image
+                <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">
+                  Upload merchant QR image
                 </span>
                 <span className="text-xs text-slate-500 mt-1">
-                  Supports PNG, JPG, WEBP from PhonePe, GPay, Paytm, or billing counter
+                  PNG, JPG, WEBP from any UPI app
                 </span>
               </label>
             </div>
@@ -402,10 +381,10 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
           {/* Manual Input Mode */}
           {qrMethod === 'manual' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Merchant UPI ID (VPA) *
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Merchant UPI ID (VPA)
                 </label>
                 <input
                   type="text"
@@ -413,89 +392,72 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   onChange={(e) => {
                     const text = e.target.value;
                     const parsed = parseUPIUri(text);
-                    setParsedUPI({ ...parsed, pa: text, pn: parsedUPI.pn });
+                    setParsedUPI({ ...parsed, pa: text });
                   }}
-                  placeholder="e.g. abcstore@icici"
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                  placeholder="e.g. store@upi"
+                  className="input-premium"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Merchant Display Name
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Merchant Name
                 </label>
                 <input
                   type="text"
                   value={parsedUPI.pn}
                   onChange={(e) => setParsedUPI({ ...parsedUPI, pn: e.target.value })}
                   placeholder="e.g. ABC Store"
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                  className="input-premium"
                 />
               </div>
             </div>
           )}
 
-          {/* Decoded Merchant Information Confirmation Card */}
-          {parsedUPI.pa ? (
-            <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          {/* Decoded Merchant Info */}
+          {parsedUPI.pa && (
+            <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Store className="w-4 h-4 text-indigo-600" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
                     Decoded Merchant Information
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
                   VPA Verified
                 </span>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-xs text-slate-500 font-medium">Merchant:</span>
+                  <span className="block text-xs text-slate-500 font-medium mb-1">Merchant</span>
                   <p className="font-bold text-slate-900">{parsedUPI.pn || 'Merchant Store'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500 font-medium">UPI ID:</span>
-                  <p className="font-mono font-bold text-slate-900 text-xs sm:text-sm truncate">
-                    {parsedUPI.pa}
-                  </p>
+                  <span className="block text-xs text-slate-500 font-medium mb-1">UPI ID</span>
+                  <p className="font-mono font-bold text-slate-900 text-xs truncate">{parsedUPI.pa}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500 font-medium">Total Amount:</span>
+                  <span className="block text-xs text-slate-500 font-medium mb-1">Total Amount</span>
                   <p className="font-extrabold text-indigo-600">{formatINR(totalAmount)}</p>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="mt-4 p-3.5 rounded-xl bg-slate-50/80 border border-dashed border-slate-200 flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <QrCode className="w-4 h-4 text-slate-400" />
-                <span>No merchant scanned yet. Scan any UPI QR above or enter UPI ID manually.</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQrMethod('manual')}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
-              >
-                Enter manually →
-              </button>
-            </div>
           )}
         </div>
 
-        {/* Section 2: Total Payment Amount & Live UPI Tax on this Scanned Amount */}
-        <div className="p-6 sm:p-8">
+        {/* Section 2: Amount */}
+        <div className="mt-10 border-t border-slate-100 pt-8 space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-              2. Total Payment Amount
-            </label>
-            <span className="text-xs font-medium text-slate-500">
-              Auto-filled from QR or edit manually
-            </span>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                2. Total Payment Amount
+              </label>
+              <p className="text-xs text-slate-500 mt-0.5">Enter or adjust the bill amount</p>
+            </div>
           </div>
           <div className="relative max-w-md">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-slate-300">
               ₹
             </span>
             <input
@@ -506,13 +468,13 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               max="500000"
               value={amountInputStr}
               onChange={(e) => handleAmountInputChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3.5 text-2xl font-black text-slate-900 bg-slate-50/70 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-              placeholder="5000"
+              className="input-premium pl-12 pr-4 text-3xl font-black"
+              placeholder="Enter amount"
             />
           </div>
 
-          {/* Quick preset amount chips */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          {/* Preset chips */}
+          <div className="flex flex-wrap gap-2 mt-4">
             {[1999, 2500, 5000, 10000, 25000].map((amt) => (
               <button
                 key={amt}
@@ -523,7 +485,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 }}
                 className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer min-h-[38px] flex items-center justify-center ${
                   totalAmount === amt
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
                 }`}
               >
@@ -532,112 +494,88 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             ))}
           </div>
 
-          {/* Live Full-Payment UPI Tax Percentage Banner for this Amount */}
-          {(() => {
-            if (totalAmount <= 0) {
-              return (
-                <div className="mt-4 p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-slate-500 text-xs flex items-center gap-2.5">
-                  <Percent className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span>Scan any merchant QR code or enter your payment amount above to view live NPCI UPI tax calculations.</span>
-                </div>
-              );
-            }
-            const singleExceeds = totalAmount > THRESHOLD;
-            const singleTax = computeMDR(totalAmount);
-            return (
-              <div className={`mt-4 p-4 rounded-xl border transition-all ${
-                singleExceeds
-                  ? 'bg-amber-50/90 border-amber-300/80 text-amber-950'
-                  : 'bg-emerald-50/90 border-emerald-300/80 text-emerald-950'
+          {/* MDR Tax Banner */}
+          <div className={`mt-6 p-5 rounded-2xl border transition-all duration-300 ${
+            singleExceeds
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                singleExceeds ? 'bg-amber-500' : 'bg-emerald-600'
               }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shrink-0 mt-0.5 shadow-2xs ${
-                      singleExceeds ? 'bg-amber-500' : 'bg-emerald-600'
-                    }`}>
-                      <Percent className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                          Current UPI Tax on {formatINR(totalAmount)} (Full Single Payment):
-                        </span>
-                        <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                          singleExceeds
-                            ? 'bg-amber-200 text-amber-900 border border-amber-300'
-                            : 'bg-emerald-200 text-emerald-900 border border-emerald-300'
-                        }`}>
-                          {singleExceeds ? `0.40% Taxable MDR (~${formatINR(singleTax)})` : '0.00% Zero MDR (₹0.00)'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        {singleExceeds ? (
-                          <>
-                            Under the 2026 UPI MDR framework, merchant transactions above ₹2,000 incur <strong>0.4% MDR (capped at ₹300 for ₹75,000+)</strong>. MDR is paid by the merchant, not the customer.
-                            <span className="block text-indigo-700 font-bold mt-0.5">
-                              ⚡ Split this bill into installments below to bring each installment ≤ ₹2,000 and keep it tax-free!
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            This amount is ≤ ₹2,000, which qualifies for <strong>0% MDR Exemption</strong> under UPI rules.
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Percent className="w-5 h-5 text-white" />
               </div>
-            );
-          })()}
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    MDR on Single Payment
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    singleExceeds ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    {singleExceeds ? 'Taxable' : '0% Free'}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-slate-900">{formatINR(singleTax)}</span>
+                  <span className="text-xs font-bold text-slate-500">MDR</span>
+                </div>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  {singleExceeds ? (
+                    <>
+                      Merchant transactions above ₹2,000 attract <strong>0.4% MDR</strong> (capped at ₹300 for ₹75,000+). Split this bill into installments ≤ ₹2,000 each to pay <strong className="text-emerald-600 font-bold">₹0 MDR</strong>.
+                    </>
+                  ) : (
+                    <>
+                      This amount is ≤ ₹2,000 and qualifies for <strong className="text-emerald-600 font-bold">0% MDR exemption</strong> under NPCI rules.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Section 3: Split Configuration & Tax on Split Amounts */}
-        <div className="p-6 sm:p-8">
-          {/* Live UPI Tax & Surcharge Advisor (NPCI Regulations) */}
-          <div className="mb-6">
-            <UPITaxAdvisor
-              totalAmount={totalAmount}
-              numberOfPayments={numberOfPayments}
-              splitAmounts={splitAmounts}
-              onSelectSplitCount={(count) => setNumberOfPayments(count)}
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        {/* Section 3: Split Configuration */}
+        <div className="mt-10 border-t border-slate-100 pt-8 space-y-6">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Number of Payments
+                3. Split Configuration
               </label>
-              <p className="text-xs text-slate-500">Choose how many installments you want to create (adjust to optimize taxes).</p>
-            </div>
-
-            {/* Split Mode Selector */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-xl text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setSplitMode('equal')}
-                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  splitMode === 'equal' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600'
-                }`}
-              >
-                Equal Split
-              </button>
-              <button
-                type="button"
-                onClick={() => setSplitMode('custom')}
-                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  splitMode === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600'
-                }`}
-              >
-                Custom Amounts
-              </button>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Choose number of installments. Keep each ≤ ₹2,000 for 0% MDR.
+              </p>
             </div>
           </div>
 
-          {/* Payment Count Options */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 sm:gap-2 mb-6">
-            {[2, 3, 4, 5, 6, 8, 10, 12].map((count) => {
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => setSplitMode('equal')}
+              className={`interactive px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+                splitMode === 'equal'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              Equal Split
+            </button>
+            <button
+              onClick={() => setSplitMode('custom')}
+              className={`interactive px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+                splitMode === 'custom'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              Custom Amounts
+            </button>
+          </div>
+
+          {/* Payment count buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+            {[2, 3, 4, 5, 6, 8].map((count) => {
               const perSplit = totalAmount / count;
               const isExempt = perSplit <= THRESHOLD;
               return (
@@ -645,68 +583,61 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   key={count}
                   type="button"
                   onClick={() => setNumberOfPayments(count)}
-                  className={`py-2 px-1 sm:px-1.5 rounded-lg text-center border font-bold text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] sm:min-h-[52px] flex flex-col items-center justify-center relative ${
+                  className={`py-2 px-1 rounded-xl text-center border transition-all duration-200 cursor-pointer min-h-[44px] flex flex-col items-center justify-center ${
                     numberOfPayments === count
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm scale-[1.02]'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
                   }`}
                 >
-                  <span className="block text-[10px] sm:text-xs">{count}x</span>
-                  <span className={`text-[8px] sm:text-[9px] font-bold mt-0.5 ${
-                    numberOfPayments === count
-                      ? isExempt ? 'text-emerald-200' : 'text-amber-200'
-                      : isExempt ? 'text-emerald-600' : 'text-slate-400'
+                  <span className="text-[10px] font-bold">{count}x</span>
+                  <span className={`text-[8px] font-bold mt-0.5 ${
+                    isExempt ? 'text-emerald-600' : 'text-amber-600'
                   }`}>
                     {isExempt ? '0% MDR' : 'MDR'}
                   </span>
                 </button>
               );
             })}
-            {/* Custom Count Stepper */}
-            <div className={`p-1 sm:p-1.5 rounded-lg border flex flex-col items-center justify-center min-h-[44px] sm:min-h-[52px] ${numberOfPayments > 12 ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 bg-white'}`}>
-              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Custom</span>
-              <div className="flex items-center gap-1 mt-0.5">
+            <div className={`p-1 rounded-xl border flex flex-col items-center justify-center min-h-[44px] ${numberOfPayments > 8 ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white'}`}>
+              <span className="text-[9px] font-bold text-slate-500 uppercase">Custom</span>
+              <div className="flex items-center gap-1 mt-1">
                 <button
-                  type="button"
                   onClick={() => setNumberOfPayments(Math.max(2, numberOfPayments - 1))}
-                  className="w-5 sm:w-6 h-5 sm:h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
-                  aria-label="Decrease payments"
+                  className="w-5 h-5 rounded bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
                 >
                   -
                 </button>
-                <span className="text-xs sm:text-sm font-bold text-slate-900 w-4 sm:w-5 text-center">{numberOfPayments}</span>
+                <span className="text-xs font-bold text-slate-900 w-5 text-center">{numberOfPayments}</span>
                 <button
-                  type="button"
                   onClick={() => setNumberOfPayments(numberOfPayments + 1)}
-                  className="w-5 sm:w-6 h-5 sm:h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
-                  aria-label="Increase payments"
+                  className="w-5 h-5 rounded bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
                 >
                   +
                 </button>
               </div>
-              <p className="text-[8px] sm:text-[9px] text-slate-500 mt-0.5">
+              <p className="text-[8px] text-slate-500 mt-1">
                 Max {Math.ceil(totalAmount / THRESHOLD)} for 0% MDR
               </p>
             </div>
           </div>
 
-          {/* Installment Breakdown Items */}
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Installment Breakdown Preview
+          {/* Installment Breakdown */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Installment Breakdown
               </h4>
-              <span className="text-[11px] text-slate-400">
-                Threshold: ≤ {formatINR(2000)} = 0% Surcharge
+              <span className="text-[10px] text-slate-400">
+                Threshold: ≤ {formatINR(THRESHOLD)} = 0% MDR
               </span>
             </div>
 
             {splitAmounts.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50/80 rounded-xl border border-dashed border-slate-200">
-                <Percent className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-bold text-slate-700">No payment amount specified yet</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Point your camera at a merchant QR above, upload an invoice QR, or enter your bill amount.
+              <div className="p-8 rounded-2xl bg-slate-50/50 border border-dashed border-slate-200 text-center">
+                <QrCode className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm font-bold text-slate-700 mb-1">Enter amount to see breakdown</p>
+                <p className="text-xs text-slate-500">
+                  Scan a QR or enter bill amount above.
                 </p>
               </div>
             ) : (
@@ -716,138 +647,104 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 return (
                   <div
                     key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 gap-3"
+                    className="group flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-100 hover:shadow-sm transition-all duration-200"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
                         {idx + 1}
                       </div>
                       <div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-slate-900">Payment {idx + 1}</span>
                           {exceedsThreshold ? (
-                            <span className="text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
-                              0.40% Taxable MDR (~{formatINR(instTax)})
+                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                              0.4% MDR
                             </span>
                           ) : (
-                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> 0.00% Zero MDR
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                              <CheckCircle2 className="w-3 h-3" /> 0% MDR
                             </span>
                           )}
                         </div>
-                        <span className="block text-[11px] text-slate-500 mt-0.5">
-                          {idx === 0 ? 'Due Immediately' : 'Unlocks sequentially'} • {exceedsThreshold ? 'Exceeds ₹2,000 MDR threshold' : 'Under ₹2,000 MDR-exempt'}
+                        <span className="block text-[10px] text-slate-500 mt-0.5">
+                          {idx === 0 ? 'Due Immediately' : 'Unlocks Sequentially'} • {exceedsThreshold ? 'Above ₹2,000 threshold' : 'Under ₹2,000 exempt'}
                         </span>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-3">
-                      {splitMode === 'custom' ? (
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={amt}
-                            onChange={(e) => handleCustomAmountChange(idx, e.target.value)}
-                            className="w-28 pl-6 pr-2 py-1.5 text-right font-extrabold text-slate-900 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-right">
-                          <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
-                          <span className={`text-[10px] font-extrabold ${exceedsThreshold ? 'text-amber-700' : 'text-emerald-700'}`}>
-                            MDR: {exceedsThreshold ? `0.40% (${formatINR(instTax)})` : '₹0.00 (0%)'}
-                          </span>
-                        </div>
-                      )}
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
+                      <span className={`text-[9px] font-bold ${exceedsThreshold ? 'text-amber-700' : 'text-emerald-700'}`}>
+                        MDR: {exceedsThreshold ? `0.4% (${formatINR(instTax)})` : '₹0.00 (0%)'}
+                      </span>
                     </div>
                   </div>
                 );
               })
             )}
-          </div>
 
-          {/* Sum & Balance Guarantee Math Bar (Section 4 Requirement) */}
-          <div className={`p-4 rounded-xl border transition-colors ${
-            isSplitValid
-              ? 'bg-emerald-50/70 border-emerald-200'
-              : 'bg-amber-50/80 border-amber-300'
-          }`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold">
-              <div>
-                <span className="text-slate-600">Total: </span>
-                <span className="text-slate-900 font-extrabold">{formatINR(totalAmount)}</span>
-                <span className="text-slate-400 mx-2">|</span>
-                <span className="text-slate-600">Split Sum: </span>
-                <span className="text-indigo-700 font-extrabold">{formatINR(currentSplitSum)}</span>
+            {/* Sum Bar */}
+            <div className={`mt-6 p-4 rounded-2xl border transition-all duration-300 ${
+              isSplitValid
+                ? 'bg-emerald-50 border-emerald-200'
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-bold">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-600">Total:</span>
+                  <span className="text-slate-900 font-extrabold">{formatINR(totalAmount)}</span>
+                  <span className="text-slate-400 mx-2">|</span>
+                  <span className="text-slate-600">Split Sum:</span>
+                  <span className="text-indigo-700 font-extrabold">{formatINR(currentSplitSum)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-600">Remaining:</span>
+                  <span className={`font-black ${remainingDifference === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {formatINR(remainingDifference)}
+                  </span>
+                </div>
               </div>
-
-              <div>
-                <span className="text-slate-600">Remaining: </span>
-                <span className={`font-black ${remainingDifference === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                  {formatINR(remainingDifference)}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500 mt-2">
-              <strong>Split Guarantee:</strong> Sum of all split amounts must equal the original amount to 0 paisa precision. Rounding errors are strictly prevented.
-            </p>
-          </div>
-
-          {/* Supported UPI Gateways Trust Bar */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="text-xs font-bold text-slate-700">Supported with Certified UPI Apps:</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <PaymentGatewayIcon gateway="phonepe" size="xs" />
-                <span className="text-[11px] font-bold text-slate-700">PhonePe</span>
-              </div>
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <PaymentGatewayIcon gateway="gpay" size="xs" />
-                <span className="text-[11px] font-bold text-slate-700">GPay</span>
-              </div>
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <PaymentGatewayIcon gateway="paytm" size="xs" />
-                <span className="text-[11px] font-bold text-slate-700">Paytm</span>
-              </div>
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <PaymentGatewayIcon gateway="bhim" size="xs" />
-                <span className="text-[11px] font-bold text-slate-700">BHIM</span>
-              </div>
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <PaymentGatewayIcon gateway="cred" size="xs" />
-                <span className="text-[11px] font-bold text-slate-700">CRED</span>
-              </div>
+              <p className="text-[10px] text-slate-500 mt-2">
+                <strong className="text-slate-700">Split Guarantee:</strong> Sum must equal total to 0 paise precision.
+              </p>
             </div>
           </div>
 
-          {/* Contextual Sponsored Ad Slot */}
-          <GoogleAdSlot placement="compact" />
+          {/* UPI Gateways */}
+          <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Authorized via</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {['phonepe', 'gpay', 'paytm', 'bhim', 'cred', 'amazonpay', 'navi', 'other'].map((gw) => (
+                <div key={gw} className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                  <PaymentGatewayIcon gateway={gw} size="xs" />
+                  <span className="text-[10px] font-bold text-slate-700 capitalize">{gw}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Action Button Footer */}
-        <div className="p-4 sm:p-6 bg-slate-50 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Google Ad Slot */}
+        <div className="mt-8 reveal stagger-5">
+          <GoogleAdSlot placement="compact" className="mb-6" />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-4 reveal stagger-5">
           <button
-            type="button"
             onClick={onCancel}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold hover:bg-slate-100 transition-colors cursor-pointer min-h-[44px] flex items-center justify-center"
+            className="w-full sm:w-auto flex-1 btn-secondary min-h-[52px] px-8 text-base"
           >
             Cancel
           </button>
-
           <button
             id="create-payment-plan-submit-btn"
             type="button"
             disabled={!isSplitValid || isSubmitting || !parsedUPI.pa}
             onClick={handleSubmitPlan}
-            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-extrabold text-sm shadow-md shadow-indigo-200 hover:shadow-indigo-300 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed min-h-[48px]"
+            className="w-full sm:w-auto flex-1 btn-primary min-h-[52px] px-10 text-base"
           >
             {isSubmitting ? (
               <>
@@ -856,7 +753,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               </>
             ) : (
               <>
-                <span>Review Payment Plan</span>
+                <span>Create Payment Plan</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

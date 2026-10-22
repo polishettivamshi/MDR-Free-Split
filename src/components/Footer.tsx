@@ -1,66 +1,84 @@
 import React from 'react';
-import { Layers, QrCode, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Layers, QrCode, HelpCircle, CheckCircle2, ShieldCheck, Mail, Phone } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
 }
 
+const FOOTER_LINKS = [
+  { label: 'Scan & Split', view: 'create-split', icon: QrCode },
+  { label: 'Overview', view: 'landing', icon: Layers },
+  { label: 'How It Works', view: 'how-it-works', icon: HelpCircle },
+];
+
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
-    <footer className="bg-slate-900 text-slate-400 text-xs border-t border-slate-800 mt-auto py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-800">
-          {/* Brand & Mission */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">
-              <Layers className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-white text-base font-extrabold tracking-tight">MDR<span className="text-emerald-400">Free Split</span></span>
-                <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/60 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  0% Tax Exemption Engine
-                </span>
+    <footer className="border-t border-slate-200/50 bg-slate-950 text-slate-300 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-indigo-600 via-emerald-500 to-cyan-400 flex items-center justify-center text-white shadow-lg">
+                <Layers className="w-4 h-4 text-white" />
               </div>
-              <p className="text-slate-400 text-xs mt-0.5">
-                Scan merchant QR codes, calculate live UPI taxes, and optimize split payments.
-              </p>
+              <span className="font-extrabold text-lg tracking-tight text-white">
+                MDR<span className="text-emerald-400">Free Split</span>
+              </span>
             </div>
+            <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+              Split merchant UPI payments into installments under ₹2,000 each to pay 0% MDR tax. Authorize securely in your UPI app.
+            </p>
           </div>
 
-          {/* Quick Essential Navigation */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            <button
-              type="button"
-              onClick={() => onNavigate('create-split')}
-              className="text-slate-300 hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <QrCode className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Scan & Split</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate('how-it-works')}
-              className="text-slate-300 hover:text-white font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-              <span>How It Works</span>
-            </button>
+          {/* Product Links */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Product</h4>
+            <nav className="space-y-3">
+              {FOOTER_LINKS.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <button
+                    key={link.view}
+                    onClick={() => onNavigate(link.view)}
+                    className="interactive flex items-center gap-2 text-sm text-slate-400 hover:text-white hover:pl-1 transition-all duration-200"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{link.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+          {/* Contact */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Contact</h4>
+            <nav className="space-y-3">
+              <a href="mailto:polishettivamshi123@gmail.com" className="interactive flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors duration-200">
+                <Mail className="w-3.5 h-3.5" />
+                <span>polishettivamshi123@gmail.com</span>
+              </a>
+              <a href="tel:+919000859695" className="interactive flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors duration-200">
+                <Phone className="w-3.5 h-3.5" />
+                <span>+91 90008 59695</span>
+              </a>
+            </nav>
           </div>
         </div>
 
-        {/* Minimal Regulatory Line */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 text-slate-500 text-[11px]">
-          <p className="text-center sm:text-left">
-            Under NPCI guidelines, merchant transactions up to ₹2,000 are 0% surcharge exempt. MDR Free Split coordinates payments via verified UPI deep-links.
-          </p>
-          <div className="flex items-center gap-3 shrink-0">
-            <span>© {new Date().getFullYear()} MDR Free Split</span>
-            <span className="w-1 h-1 rounded-full bg-slate-700" />
-            <span className="text-emerald-500 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Zero PIN Stored
-            </span>
+        <div className="border-t border-slate-800/50 pt-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-slate-500">
+              © {new Date().getFullYear()} MDR Free Split. All rights reserved.
+            </p>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-slate-500">Under NPCI guidelines, merchant transactions up to ₹2,000 are 0% MDR exempt.</span>
+              <span className="w-px h-3 bg-slate-700" />
+              <div className="flex items-center gap-1 text-emerald-500 font-semibold">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Zero PIN Stored</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

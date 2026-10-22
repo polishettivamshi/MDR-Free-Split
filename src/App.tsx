@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { CreateSplit } from './components/CreateSplit';
 import { PaymentPlanView } from './components/PaymentPlanView';
-import { LegalPages } from './components/LegalPages';
 import { SplitPlan } from './types';
 import { localStore } from './lib/localStore';
 
@@ -55,14 +54,7 @@ export default function App() {
         {currentView === 'payment-plan' && selectedPlanId && (
           <PaymentPlanView
             planId={selectedPlanId}
-            onBackToDashboard={() => setCurrentView('landing')}
-          />
-        )}
-
-        {(['terms', 'privacy', 'security', 'refund-policy', 'contact'].includes(currentView)) && (
-          <LegalPages
-            page={currentView as any}
-            onNavigate={(view) => setCurrentView(view)}
+            onBack={() => setCurrentView('landing')}
           />
         )}
       </main>
