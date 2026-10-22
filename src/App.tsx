@@ -4,7 +4,6 @@ import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { CreateSplit } from './components/CreateSplit';
 import { PaymentPlanView } from './components/PaymentPlanView';
-import { LegalPages } from './components/LegalPages';
 import { SplitPlan } from './types';
 import { localStore } from './lib/localStore';
 
@@ -18,9 +17,8 @@ export default function App() {
     setCurrentView('payment-plan');
   };
 
-  // Reset scroll position when the active view changes. Without this, opening a
-  // legal page from the footer keeps the previous scroll offset, so the user
-  // lands at the bottom of the shorter legal page instead of its heading.
+  // Reset scroll position when the active view changes, so switching between
+  // the landing, create-split and payment-plan views always starts at the top.
   // 'how-it-works' is skipped because it performs its own scroll to a section.
   const skipScrollReset = useRef(false);
 
@@ -56,7 +54,6 @@ export default function App() {
         {currentView === 'landing' && (
           <LandingPage
             onStartSplit={() => setCurrentView('create-split')}
-            onNavigate={(view) => setCurrentView(view)}
           />
         )}
 
@@ -71,13 +68,6 @@ export default function App() {
           <PaymentPlanView
             planId={selectedPlanId}
             onBack={() => setCurrentView('landing')}
-          />
-        )}
-
-        {(['terms', 'privacy', 'security', 'refund-policy', 'contact'].includes(currentView)) && (
-          <LegalPages
-            page={currentView as any}
-            onNavigate={(view) => setCurrentView(view)}
           />
         )}
       </main>

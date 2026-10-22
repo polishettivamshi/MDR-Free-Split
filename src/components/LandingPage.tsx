@@ -3,7 +3,6 @@ import { ArrowRight, ShieldCheck, Smartphone, QrCode, Lock, Layers, ChevronRight
 
 interface LandingPageProps {
   onStartSplit: () => void;
-  onNavigate: (view: string) => void;
 }
 
 const steps = [
@@ -59,7 +58,7 @@ const faqs = [
   }
 ];
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, onNavigate }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {

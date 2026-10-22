@@ -11,19 +11,11 @@ const FOOTER_LINKS = [
   { label: 'How It Works', view: 'how-it-works', icon: HelpCircle },
 ];
 
-const RESOURCE_LINKS = [
-  { label: 'Terms of Service', view: 'terms' },
-  { label: 'Privacy Policy', view: 'privacy' },
-  { label: 'Security', view: 'security' },
-  { label: 'Refund Policy', view: 'refund-policy' },
-  { label: 'Contact & Grievance', view: 'contact' },
-];
-
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
     <footer className="border-t border-slate-200/50 bg-slate-950 text-slate-300 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-12 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
@@ -58,22 +50,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               })}
             </nav>
           </div>
-          {/* Resources */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Resources</h4>
-            <nav className="space-y-3">
-              {RESOURCE_LINKS.map((link) => (
-                <button
-                  key={link.view}
-                  onClick={() => onNavigate(link.view)}
-                  className="interactive block text-left text-sm text-slate-400 hover:text-white hover:underline transition-colors duration-200"
-                >
-                  {link.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
           {/* Contact */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Contact</h4>

@@ -728,7 +728,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
         {/* Google Ad Slot */}
         <div className="mt-8 reveal stagger-5">
-          <GoogleAdSlot placement="compact" className="mb-6" />
+          <GoogleAdSlot placement="compact" slot="createSplit" className="mb-6" />
         </div>
 
         {/* Action Buttons */}

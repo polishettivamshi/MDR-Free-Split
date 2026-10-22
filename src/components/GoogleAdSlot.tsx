@@ -1,33 +1,66 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import {
+  loadAdsenseScript,
+  pushAdRequest,
+  resolveAdsenseClient,
+  resolveSlotId,
+  type AdsenseSlotKey,
+} from '../lib/adsense';
 
 interface GoogleAdSlotProps {
   placement?: 'banner' | 'compact';
+  /** Ad unit slot to pin this placement to. Defaults to Auto ads. */
+  slot?: AdsenseSlotKey;
   className?: string;
 }
 
 export const GoogleAdSlot: React.FC<GoogleAdSlotProps> = ({
   placement = 'banner',
+  slot,
   className = ''
 }) => {
-  const publisherId = import.meta.env.VITE_ADSENSE_PUBLISHER_ID;
+  // Always resolve a real publisher ID — the env var may be absent in the
+  // deployed build, and a missing ID would request `client=undefined`.
+  const publisherId = resolveAdsenseClient();
+  const slotId = slot ? resolveSlotId(slot) : '';
+  const insRef = useRef<HTMLModElement | null>(null);
+  const isEnabled = publisherId.length > 0;
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
-    script.crossOrigin = 'anonymous';
-    document.head.appendChild(script);
+    if (!isEnabled) return;
+
+    let cancelled = false;
+
+    loadAdsenseScript(publisherId)
+      .then(() => {
+        if (!cancelled) pushAdRequest(insRef.current);
+      })
+      .catch((error) => {
+        console.error('AdSense loader error', error);
+      });
 
     return () => {
-      document.head.removeChild(script);
+      cancelled = true;
     };
-  }, [publisherId]);
+  }, [publisherId, isEnabled]);
+
+  const adSlot = (
+    <ins
+      ref={insRef}
+      className="adsbygoogle"
+      style={{ display: 'block' }}
+      data-ad-client={publisherId}
+      data-ad-slot={slotId || undefined}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    />
+  );
 
   const renderBanner = () => (
     <div
       className={`text-center p-6 sm:p-8 bg-slate-50/50 border border-slate-200 rounded-2xl ${className}`}
     >
-      <ins className="adsbygoogle" style={{ display: 'block' }} data-ad-client={publisherId} />
+      {isEnabled ? adSlot : <p className="text-xs text-slate-400">Advertisement</p>}
     </div>
   );
 
@@ -35,7 +68,7 @@ export const GoogleAdSlot: React.FC<GoogleAdSlotProps> = ({
     <div
       className={`text-center p-3 sm:p-4 bg-slate-50/50 border border-slate-200 rounded-xl ${className}`}
     >
-      <ins className="adsbygoogle" style={{ display: 'block' }} data-ad-client={publisherId} />
+      {isEnabled ? adSlot : <p className="text-xs text-slate-400">Advertisement</p>}
     </div>
   );
 

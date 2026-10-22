@@ -1,14 +1,63 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig} from 'vite';
+import fs from 'node:fs';
+import path from 'node:path';
+import {defineConfig, loadEnv, type Plugin} from 'vite';
+import {resolveSiteUrl} from './site.config';
 
-export default defineConfig(() => {
+const rootDir = import.meta.dirname;
+
+/**
+ * Substitutes `%VITE_SITE_URL%` with the resolved canonical site URL.
+ *
+ * Two different mechanisms are needed:
+ * - `index.html` goes through the HTML transform pipeline, where the
+ *   placeholder is replaced before the file is written.
+ * - Files in `public/` are copied verbatim by Vite after the bundle is
+ *   written, so they are re-written in `closeBundle` instead.
+ */
+const siteUrlPlugin = (siteUrl: string): Plugin => {
+  const substitute = (html: string) => html.replaceAll('%VITE_SITE_URL%', siteUrl);
+  const publicFiles = ['robots.txt', 'sitemap.xml'];
+
   return {
-    plugins: [react(), tailwindcss()],
+    name: 'site-url',
+    enforce: 'pre',
+
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return substitute(html);
+      },
+    },
+
+    closeBundle() {
+      for (const file of publicFiles) {
+        const source = path.resolve(rootDir, 'public', file);
+        if (!fs.existsSync(source)) continue;
+
+        const target = path.resolve(rootDir, 'dist', file);
+        const contents = substitute(fs.readFileSync(source, 'utf8'));
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, contents, 'utf8');
+      }
+    },
+  };
+};
+
+export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const siteUrl = resolveSiteUrl(env);
+
+  return {
+    plugins: [react(), tailwindcss(), siteUrlPlugin(siteUrl)],
+    define: {
+      // Available as `%VITE_SITE_URL%` inside index.html.
+      __SITE_URL__: JSON.stringify(siteUrl),
+    },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': rootDir,
       },
     },
     server: {

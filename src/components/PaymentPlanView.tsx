@@ -535,7 +535,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
       {/* Google Ad Slot */}
       <div className="mb-8 reveal stagger-5">
-        <GoogleAdSlot placement="banner" className="mb-6" />
+        <GoogleAdSlot placement="banner" slot="paymentPlan" className="mb-6" />
       </div>
 
       {/* Modal: Choose App */}
