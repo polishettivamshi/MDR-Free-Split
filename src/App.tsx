@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { CreateSplit } from './components/CreateSplit';
 import { PaymentPlanView } from './components/PaymentPlanView';
+import { LegalPages } from './components/LegalPages';
 import { SplitPlan } from './types';
 import { localStore } from './lib/localStore';
 
@@ -17,6 +18,20 @@ export default function App() {
     setCurrentView('payment-plan');
   };
 
+  // Reset scroll position when the active view changes. Without this, opening a
+  // legal page from the footer keeps the previous scroll offset, so the user
+  // lands at the bottom of the shorter legal page instead of its heading.
+  // 'how-it-works' is skipped because it performs its own scroll to a section.
+  const skipScrollReset = useRef(false);
+
+  useEffect(() => {
+    if (skipScrollReset.current) {
+      skipScrollReset.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentView]);
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Header */}
@@ -24,6 +39,7 @@ export default function App() {
         currentView={currentView}
         onNavigate={(view) => {
           if (view === 'how-it-works') {
+            skipScrollReset.current = true;
             setCurrentView('landing');
             setTimeout(() => {
               const el = document.getElementById('how-it-works-section');
@@ -55,6 +71,13 @@ export default function App() {
           <PaymentPlanView
             planId={selectedPlanId}
             onBack={() => setCurrentView('landing')}
+          />
+        )}
+
+        {(['terms', 'privacy', 'security', 'refund-policy', 'contact'].includes(currentView)) && (
+          <LegalPages
+            page={currentView as any}
+            onNavigate={(view) => setCurrentView(view)}
           />
         )}
       </main>

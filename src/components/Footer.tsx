@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, QrCode, HelpCircle, CheckCircle2, ShieldCheck, Mail, Phone } from 'lucide-react';
+import { Layers, QrCode, HelpCircle, CheckCircle2, Mail, Phone } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
@@ -9,6 +9,14 @@ const FOOTER_LINKS = [
   { label: 'Scan & Split', view: 'create-split', icon: QrCode },
   { label: 'Overview', view: 'landing', icon: Layers },
   { label: 'How It Works', view: 'how-it-works', icon: HelpCircle },
+];
+
+const RESOURCE_LINKS = [
+  { label: 'Terms of Service', view: 'terms' },
+  { label: 'Privacy Policy', view: 'privacy' },
+  { label: 'Security', view: 'security' },
+  { label: 'Refund Policy', view: 'refund-policy' },
+  { label: 'Contact & Grievance', view: 'contact' },
 ];
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
@@ -50,6 +58,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               })}
             </nav>
           </div>
+          {/* Resources */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Resources</h4>
+            <nav className="space-y-3">
+              {RESOURCE_LINKS.map((link) => (
+                <button
+                  key={link.view}
+                  onClick={() => onNavigate(link.view)}
+                  className="interactive block text-left text-sm text-slate-400 hover:text-white hover:underline transition-colors duration-200"
+                >
+                  {link.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
           {/* Contact */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">Contact</h4>
