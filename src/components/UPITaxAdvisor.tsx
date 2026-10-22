@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  Percent, 
-  ShieldCheck, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Sparkles, 
-  Info, 
-  ChevronRight, 
-  ArrowDownRight, 
-  RefreshCw,
-  TrendingDown,
-  Building2,
-  HelpCircle,
-  Zap
+import {
+  Percent,
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  TrendingDown
 } from 'lucide-react';
 import { UPITaxRule, UPITaxCalculationResult, SplitOptionTaxComparison } from '../types';
 import { formatINR } from '../lib/upi';
@@ -127,7 +120,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
 
     const totalSplitTax = installments.reduce((acc, curr) => acc + curr.taxAmount, 0);
     const taxSaved = Math.max(0, Math.round((singleTax - totalSplitTax) * 100) / 100);
-    const isFullyExempt = totalSplitTax === 0;
+    const isFullyExempt = installments.length > 0 && totalSplitTax === 0;
 
     const splitOptions: SplitOptionTaxComparison[] = [2, 3, 4, 5, 6].map(count => {
       const perInst = Math.round((totalAmount / count) * 100) / 100;
@@ -166,8 +159,6 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
   if (!taxCalculation || totalAmount <= 0) return null;
 
   const threshold = taxCalculation.exemptionThreshold;
-  const anyExceeds = taxCalculation.installments.some(i => i.exceedsThreshold);
-  const singleExceeds = taxCalculation.singlePaymentExceeds;
 
   return (
     <div className={`rounded-2xl border transition-all duration-300 ${

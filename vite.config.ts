@@ -2,13 +2,14 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
-import {defineConfig, loadEnv, type Plugin} from 'vite';
-import {resolveSiteUrl} from './site.config';
+import {defineConfig, type Plugin} from 'vite';
+import {resolveSiteUrl} from './site.config.ts';
 
 const rootDir = import.meta.dirname;
 
 /**
- * Substitutes `%VITE_SITE_URL%` with the resolved canonical site URL.
+ * Substitutes `%VITE_SITE_URL%` / `%SITE_URL%` with the resolved canonical
+ * site URL.
  *
  * Two different mechanisms are needed:
  * - `index.html` goes through the HTML transform pipeline, where the
@@ -17,7 +18,8 @@ const rootDir = import.meta.dirname;
  *   written, so they are re-written in `closeBundle` instead.
  */
 const siteUrlPlugin = (siteUrl: string): Plugin => {
-  const substitute = (html: string) => html.replaceAll('%VITE_SITE_URL%', siteUrl);
+  const substitute = (html: string) =>
+    html.replaceAll('%VITE_SITE_URL%', siteUrl).replaceAll('%SITE_URL%', siteUrl);
   const publicFiles = ['robots.txt', 'sitemap.xml'];
 
   return {
@@ -45,16 +47,11 @@ const siteUrlPlugin = (siteUrl: string): Plugin => {
   };
 };
 
-export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const siteUrl = resolveSiteUrl(env);
+export default defineConfig(() => {
+  const siteUrl = resolveSiteUrl();
 
   return {
     plugins: [react(), tailwindcss(), siteUrlPlugin(siteUrl)],
-    define: {
-      // Available as `%VITE_SITE_URL%` inside index.html.
-      __SITE_URL__: JSON.stringify(siteUrl),
-    },
     resolve: {
       alias: {
         '@': rootDir,
@@ -62,7 +59,7 @@ export default defineConfig(({mode}) => {
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modify — file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},

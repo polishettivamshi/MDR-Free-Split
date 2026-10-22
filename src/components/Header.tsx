@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layers, ShieldCheck, Smartphone, ChevronDown, Menu, X, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layers, Smartphone, ChevronDown, Menu, X, BarChart3 } from 'lucide-react';
 
 interface HeaderProps {
   currentView: string;
@@ -15,7 +15,6 @@ const NAV_LINKS = [
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const headerRef = useRef<HTMLHeadingElement>(null);
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 10);
@@ -36,7 +35,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
   return (
     <>
       <header
-        ref={headerRef}
         className={`sticky top-0 z-50 border-b ${
           scrolled
             ? 'bg-white/90 backdrop-blur-lg shadow-sm border-slate-200'

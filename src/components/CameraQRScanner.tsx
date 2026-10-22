@@ -1,18 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import jsQR from 'jsqr';
-import { 
-  Camera, 
-  FlipHorizontal, 
-  Zap, 
-  ZapOff, 
-  X, 
-  AlertCircle, 
-  Sparkles, 
-  CheckCircle2, 
-  RefreshCw, 
-  Upload, 
-  FileImage,
-  Store,
+import {
+  Camera,
+  FlipHorizontal,
+  Zap,
+  ZapOff,
+  X,
+  AlertCircle,
+  Sparkles,
+  CheckCircle2,
+  RefreshCw,
+  Upload,
   QrCode
 } from 'lucide-react';
 import { parseUPIUri, formatINR } from '../lib/upi';
@@ -22,8 +20,19 @@ interface CameraQRScannerProps {
   onScan: (scannedText: string, parsed: ParsedUPI) => void;
   onClose?: () => void;
   className?: string;
-  allowManualSample?: boolean;
 }
+
+interface BarcodeDetectorResult {
+  rawValue?: string;
+}
+
+type BarcodeDetectorConstructor = new (options: { formats: string[] }) => {
+  detect: (source: CanvasImageSource) => Promise<BarcodeDetectorResult[]>;
+};
+
+type TorchCapabilities = MediaTrackCapabilities & { torch?: boolean };
+type TorchConstraintSet = MediaTrackConstraintSet & { torch?: boolean };
+type AudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
 
 export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   onScan,
@@ -36,7 +45,6 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const lastScanTimeRef = useRef<number>(0);
 
-  const [hasCamera, setHasCamera] = useState<boolean>(true);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -49,7 +57,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   // Play pleasant sound chime on successful QR scan
   const playScanChime = () => {
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as AudioWindow).webkitAudioContext;
       if (AudioCtx) {
         const ctx = new AudioCtx();
         const osc = ctx.createOscillator();
@@ -127,9 +135,13 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
         let detectedCode: string | null = null;
 
         // 1. Try native BarcodeDetector API (fast hardware accelerated in Chrome/Android)
-        if ('BarcodeDetector' in window) {
+        const BarcodeDetectorCtor = (window as Window & {
+          BarcodeDetector?: BarcodeDetectorConstructor;
+        }).BarcodeDetector;
+
+        if (BarcodeDetectorCtor) {
           try {
-            const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+            const barcodeDetector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
             const barcodes = await barcodeDetector.detect(video);
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
               detectedCode = barcodes[0].rawValue;
@@ -180,7 +192,6 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
 
     // Check if mediaDevices is supported
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setHasCamera(false);
       setCameraError('Camera access is not supported by your current browser. Please upload a QR code image or enter merchant details manually.');
       setIsInitializing(false);
       return;
@@ -203,7 +214,9 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
       // Check torch capability on active video track
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
-        const capabilities: any = typeof videoTrack.getCapabilities === 'function' ? videoTrack.getCapabilities() : {};
+        const capabilities = (typeof videoTrack.getCapabilities === 'function'
+          ? videoTrack.getCapabilities()
+          : {}) as TorchCapabilities;
         setHasTorch(Boolean(capabilities?.torch));
       }
 
@@ -219,18 +232,19 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
         // Start scanning loop
         animFrameRef.current = requestAnimationFrame(scanLoop);
       }
-    } catch (err: any) {
-      console.warn('Camera access getUserMedia error:', err);
+    } catch (err) {
+      const error = err as { name?: string; message?: string };
+      console.warn('Camera access getUserMedia error:', error);
       setIsInitializing(false);
 
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setCameraError('Camera permission was denied. Please allow camera access in your browser settings to scan merchant QR codes.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         setCameraError('No video camera was found on your device.');
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         setCameraError('Camera is already in use by another application or tab.');
       } else {
-        setCameraError(`Camera error: ${err.message || 'Unable to start camera stream'}.`);
+        setCameraError(`Camera error: ${error.message || 'Unable to start camera stream'}.`);
       }
     }
   }, [scanLoop, stopStream]);
@@ -249,8 +263,8 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
     if (!track) return;
     try {
       const nextTorch = !torchOn;
-      await (track as any).applyConstraints({
-        advanced: [{ torch: nextTorch }]
+      await track.applyConstraints({
+        advanced: [{ torch: nextTorch } as TorchConstraintSet]
       });
       setTorchOn(nextTorch);
     } catch (e) {
@@ -268,7 +282,8 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
 
   // Handle uploaded image fallback directly inside scanner
   const handleUploadedFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -279,22 +294,31 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, img.width, img.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'attemptBoth'
-          });
-          if (code && code.data) {
-            handleSuccess(code.data);
-          } else {
-            setCameraError('Could not decode a readable UPI QR code from the selected image. Please try another image.');
-          }
+        if (!ctx) {
+          setCameraError('Could not read this image. Please try another image.');
+          return;
         }
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        if (code && code.data) {
+          handleSuccess(code.data);
+        } else {
+          setCameraError('Could not decode a readable UPI QR code from the selected image. Please try another image.');
+        }
+      };
+      img.onerror = () => {
+        setCameraError('This image could not be opened. Please choose a PNG, JPG, or WEBP file.');
       };
       img.src = event.target?.result as string;
     };
+    reader.onerror = () => {
+      setCameraError('The selected file could not be read. Please try another image.');
+    };
     reader.readAsDataURL(file);
+    input.value = '';
   };
 
   return (

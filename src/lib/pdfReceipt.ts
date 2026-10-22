@@ -40,7 +40,7 @@ export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): vo
 
   doc.setFontSize(8.5);
   doc.setTextColor(167, 243, 208); // Emerald-200
-  doc.text('PAID IN FULL - 100% VERIFIED', rightMargin, 22, { align: 'right' });
+  doc.text('PAID IN FULL - USER CONFIRMED', rightMargin, 22, { align: 'right' });
 
   // 2. Plan Overview Card
   const cardTop = 38;
@@ -247,7 +247,7 @@ export function generateReceiptPDF(plan: SplitPlan, items: SplitItem[] = []): vo
     '1. MDR Free Split strictly abides by NPCI and RBI security standards. The user authorized each installment directly ' +
     'within their certified UPI application (PhonePe, Google Pay, Paytm, BHIM, etc.) using their private UPI PIN.\n' +
     '2. MDR Free Split never collected, viewed, or stored the user\'s UPI PIN, bank credentials, card numbers, or OTPs.\n' +
-    '3. All payments were verified through banking switch queries and cryptographic webhook telemetry.';
+    '3. Payment completion was marked by the user in this app. Final settlement remains subject to confirmation by the user\'s bank and UPI app.';
   
   doc.text(complianceText, leftMargin + 6, securityTop + 12, { maxWidth: contentWidth - 12 });
 

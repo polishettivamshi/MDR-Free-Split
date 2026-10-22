@@ -1,4 +1,4 @@
-import { SplitPlan, SplitItem, Payment, UPIApp } from '../types';
+import { SplitPlan, SplitItem, UPIApp } from '../types';
 
 const STORAGE_KEY = 'mdfreesplit_plans';
 
@@ -27,8 +27,9 @@ export const localStore = {
 
   createPlan(planData: Partial<SplitPlan> & { items: SplitItem[] }): SplitPlan {
     const plans = loadPlans();
+    const planId = planData.id || 'plan_' + Math.random().toString(36).slice(2, 14);
     const plan: SplitPlan = {
-      id: planData.id || 'plan_' + Math.random().toString(36).slice(2, 14),
+      id: planId,
       publicId: planData.publicId || 'sp_' + Math.random().toString(36).slice(2, 12),
       userId: planData.userId || 'local',
       merchantName: planData.merchantName || '',
@@ -40,7 +41,7 @@ export const localStore = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
-      items: planData.items
+      items: (planData.items || []).map(item => ({ ...item, splitPlanId: planId }))
     };
     plans.push(plan);
     savePlans(plans);

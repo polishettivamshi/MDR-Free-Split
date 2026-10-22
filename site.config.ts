@@ -5,17 +5,15 @@
  * `index.html` (canonical link, Open Graph, JSON-LD), `robots.txt` and
  * `sitemap.xml` at build time.
  *
- * Override with the `VITE_SITE_URL` environment variable (for example in
- * Vercel → Project Settings → Environment Variables) once a custom domain
- * is live. The value is always normalised without a trailing slash.
+ * This project deliberately does NOT use environment variables: the value is
+ * hardcoded so the deployed build always matches the live domain. Update
+ * `SITE_URL` here when the domain changes and rebuild.
  */
 export const SITE_NAME = 'MDR Free Split';
 
-export const DEFAULT_SITE_URL = 'https://mdr-free-split.vercel.app';
+export const SITE_URL = 'https://mdr-free-split.vercel.app';
 
-export const resolveSiteUrl = (
-  env: Record<string, string | undefined> = process.env
-): string => {
-  const raw = env.VITE_SITE_URL || env.SITE_URL || DEFAULT_SITE_URL;
-  return raw.trim().replace(/\/+$/, '');
-};
+/**
+ * Canonical URL without a trailing slash.
+ */
+export const resolveSiteUrl = (): string => SITE_URL.trim().replace(/\/+$/, '');

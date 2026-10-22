@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { CreateSplit } from './components/CreateSplit';
 import { PaymentPlanView } from './components/PaymentPlanView';
 import { SplitPlan } from './types';
-import { localStore } from './lib/localStore';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('create-split');
@@ -22,6 +21,21 @@ export default function App() {
   // 'how-it-works' is skipped because it performs its own scroll to a section.
   const skipScrollReset = useRef(false);
 
+  // Central navigation handler. Both Header and Footer use it so views that are
+  // not real routes (like 'how-it-works') can never leave <main> empty.
+  const handleNavigate = (view: string) => {
+    if (view === 'how-it-works') {
+      skipScrollReset.current = true;
+      setCurrentView('landing');
+      window.setTimeout(() => {
+        const el = document.getElementById('how-it-works-section');
+        el?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return;
+    }
+    setCurrentView(view);
+  };
+
   useEffect(() => {
     if (skipScrollReset.current) {
       skipScrollReset.current = false;
@@ -35,18 +49,7 @@ export default function App() {
       {/* Header */}
       <Header
         currentView={currentView}
-        onNavigate={(view) => {
-          if (view === 'how-it-works') {
-            skipScrollReset.current = true;
-            setCurrentView('landing');
-            setTimeout(() => {
-              const el = document.getElementById('how-it-works-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-          } else {
-            setCurrentView(view);
-          }
-        }}
+        onNavigate={handleNavigate}
       />
 
       {/* Main View Container */}
@@ -73,7 +76,7 @@ export default function App() {
       </main>
 
       {/* Compliance Footer */}
-      <Footer onNavigate={(view) => setCurrentView(view)} />
+      <Footer onNavigate={handleNavigate} />
     </div>
   );
 }

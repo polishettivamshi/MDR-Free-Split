@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { 
@@ -7,12 +7,10 @@ import {
   Clock, 
   ArrowRight, 
   AlertCircle, 
-  QrCode, 
   Smartphone, 
   Copy, 
   Check, 
   Download, 
-  Share2, 
   RefreshCw, 
   Store, 
   ShieldCheck, 
@@ -30,13 +28,11 @@ import { localStore } from '../lib/localStore';
 
 interface PaymentPlanViewProps {
   planId: string;
-  onSplitCompleted?: () => void;
   onBack?: () => void;
 }
 
 export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({ 
-  planId, 
-  onSplitCompleted,
+  planId,
   onBack 
 }) => {
   const [plan, setPlan] = useState<SplitPlan | null>(null);
@@ -56,9 +52,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
 
-  const pollingTimerRef = useRef<any>(null);
-  const [pollCount, setPollCount] = useState<number>(0);
-  const [pollingStatusMsg, setPollingStatusMsg] = useState<string>('Verifying payment...');
+  const [statusMessage, setStatusMessage] = useState<string>('Confirm the payment in your UPI app, then tap below.');
 
   const handleDownloadReceiptPDF = () => {
     if (!plan) return;
@@ -89,28 +83,13 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
   };
 
   useEffect(() => {
-    setUpiApps([
-      { id: 'phonepe', name: 'PhonePe', packageName: 'com.phonepe.app', icon: 'phonepe', deepLinkScheme: 'phonepe://pay', enabled: true, color: '#5f259f', description: 'UPI, Wallet & Cards' },
-      { id: 'gpay', name: 'Google Pay', packageName: 'com.google.android.apps.nbu.paisa.user', icon: 'gpay', deepLinkScheme: 'tez://upi/pay', enabled: true, color: '#1a73e8', description: 'Fast & Secure with Google' },
-      { id: 'paytm', name: 'Paytm', packageName: 'net.one97.paytm', icon: 'paytm', deepLinkScheme: 'paytmmp://pay', enabled: true, color: '#00b9f5', description: 'Payments Bank & UPI' },
-      { id: 'bhim', name: 'BHIM UPI', packageName: 'in.org.npci.upiapp', icon: 'bhim', deepLinkScheme: 'upi://pay', enabled: true, color: '#005f73', description: 'National Payments Corp of India' },
-      { id: 'cred', name: 'CRED UPI', packageName: 'com.dreamplug.androidapp', icon: 'cred', deepLinkScheme: 'cred://upi/pay', enabled: true, color: '#0f0f0f', description: 'Exclusive Member UPI & Rewards' },
-      { id: 'amazonpay', name: 'Amazon Pay', packageName: 'in.amazon.mShop.android.shopping', icon: 'amazonpay', deepLinkScheme: 'amazonpay://upi/pay', enabled: true, color: '#232f3e', description: 'Cashback & Instant UPI' },
-      { id: 'navi', name: 'Navi UPI', packageName: 'com.naviapp', icon: 'navi', deepLinkScheme: 'navi://upi/pay', enabled: true, color: '#0f172a', description: 'Zero Fee UPI & Lending' },
-      { id: 'other', name: 'Other UPI App', packageName: undefined, icon: 'upi', deepLinkScheme: 'upi://pay', enabled: true, color: '#0f172a', description: 'Any Bank or Certified UPI App' }
-    ]);
+    setUpiApps(localStore.getUPIApps());
     fetchPlan();
   }, [planId]);
 
   useEffect(() => {
-    return () => {
-      if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
     if (activeDeepLink) {
-      QRCode.toDataURL(activeDeepLink, { width: 240, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
+      QRCode.toDataURL(activeDeepLink, { width: Math.min(240, window.innerWidth * 0.75), margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
         .then(url => setPaymentQrDataUrl(url))
         .catch(console.error);
     }
@@ -171,62 +150,26 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
     const appToUse = overrideAppId || selectedAppId;
     setSelectedAppId(appToUse);
 
-    if (activeDeepLink) {
+    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (activeDeepLink && isMobileDevice) {
       try {
         window.location.href = activeDeepLink;
       } catch (e) {
         console.warn('Direct scheme launch intercepted', e);
       }
     }
-
+    // On desktop, browsers without a UPI app handler would only log a
+    // failed-scheme error. Keep the QR visible for scanning by opening the
+    // confirmation step instead.
     setPaymentModalState('waiting');
-    startControlledPolling(activePayment?.publicId || '');
-  };
-
-  const startControlledPolling = (paymentPublicId: string) => {
-    if (!paymentPublicId) return;
-    if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
-
-    let count = 0;
-    setPollCount(0);
-
-    const poll = async () => {
-      count++;
-      setPollCount(count);
-      setPollingStatusMsg(`Verifying payment... (check ${count})`);
-
-      try {
-        if (activePayment) {
-          const updatedPayment: Payment = {
-            ...activePayment,
-            status: 'SUCCESS',
-            completedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          setActivePayment(updatedPayment);
-          setPaymentModalState('success');
-          fetchPlan();
-          confetti({ particleCount: 60, spread: 70, colors: ['#10b981', '#34d399'] });
-          return;
-        }
-      } catch (err) {
-        console.warn('Status poll glitch', err);
-      }
-
-      if (count < 3) {
-        pollingTimerRef.current = setTimeout(poll, 2000);
-      } else {
-        setPollingStatusMsg('Polling timeout: You can verify manually below.');
-      }
-    };
-
-    pollingTimerRef.current = setTimeout(poll, 2000);
+    setStatusMessage('Confirm the payment in your UPI app, then tap below.');
   };
 
   const handleVerifyPaymentNow = async () => {
     if (!activePayment) return;
     setIsProcessing(true);
-    setPollingStatusMsg('Confirming payment...');
+    setStatusMessage('Saving your confirmation...');
 
     try {
       if (activePayment && activeItem && plan) {
@@ -239,6 +182,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
         setActivePayment(updatedPayment);
         setPaymentModalState('success');
+        setStatusMessage('Payment confirmed.');
 
         const currentPlan = localStore.getPlan(planId);
         if (currentPlan) {
@@ -266,25 +210,17 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
         confetti({ particleCount: 80, spread: 80, colors: ['#10b981', '#34d399', '#4f46e5'] });
       }
-    } catch {
-      setPollingStatusMsg('Verification error. Please retry.');
+    } catch (err) {
+      console.error('Failed to save payment confirmation:', err);
+      setStatusMessage('Could not save the confirmation. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleRetryPayment = async () => {
-    if (!activePayment) return;
-    setIsProcessing(true);
-
-    try {
-      setPaymentModalState('choose_app');
-      fetchPlan();
-    } catch {
-      setError('Failed to reset payment attempt.');
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleRetryPayment = () => {
+    setPaymentModalState('choose_app');
+    fetchPlan();
   };
 
   const copyPaymentLink = () => {
@@ -465,7 +401,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                         setActiveItem(item);
                         if (item.payment) setActivePayment(item.payment);
                         setPaymentModalState('waiting');
-                        startControlledPolling(item.paymentId || '');
+                        setStatusMessage('Confirm the payment in your UPI app, then tap below.');
                       }}
                       className="min-h-[44px] px-4 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2"
                     >
@@ -574,7 +510,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                       setSelectedAppId(app.id);
                       handleOpenUPIApp(app.id);
                     }}
-                    className="interactive p-3 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 transition-all duration-200 text-left"
+                    className="interactive p-3 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 transition-all duration-200 text-left flex items-center gap-3"
                   >
                     <PaymentGatewayIcon gateway={app.id} size="sm" className="shrink-0" />
                     <div className="min-w-0">
@@ -593,6 +529,10 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
                 <Smartphone className="w-4 h-4" />
                 <span>Open UPI App</span>
               </button>
+
+              <p className="text-[10px] text-slate-400 text-center">
+                On a computer? Scan the QR below with your phone instead.
+              </p>
 
               {paymentQrDataUrl && (
                 <div className="mt-6 pt-6 border-t border-slate-100 text-center">
@@ -655,8 +595,8 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
             </div>
 
             <div className="flex items-center justify-center gap-2 text-xs text-indigo-700 bg-indigo-50 py-2.5 px-4 rounded-xl font-medium mb-8">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-              <span>{pollingStatusMsg}</span>
+              <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isProcessing ? 'animate-spin' : ''}`} />
+              <span>{statusMessage}</span>
             </div>
 
             <div className="space-y-3">
@@ -671,10 +611,14 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
               </button>
 
               <button
-                onClick={() => {
-                  if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
-                  setPaymentModalState(null);
-                }}
+                onClick={() => setPaymentModalState('failed')}
+                className="min-h-[44px] py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors flex items-center justify-center"
+              >
+                The payment failed or didn't go through
+              </button>
+
+              <button
+                onClick={() => setPaymentModalState(null)}
                 className="min-h-[44px] py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors flex items-center justify-center"
               >
                 Cancel
@@ -682,7 +626,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-400 mt-6">
-              Security note: MDR Free Split verifies payment completion before unlocking the next installment.
+              Security note: the next installment stays locked until you confirm this one is complete.
             </p>
           </div>
         </div>
@@ -698,7 +642,7 @@ export const PaymentPlanView: React.FC<PaymentPlanViewProps> = ({
 
             <h2 className="text-2xl font-black text-slate-900 mb-1">Payment Successful ✓</h2>
             <p className="text-xs text-slate-500 mb-8">
-              Verified • Encrypted UPI confirmation
+              Confirmed by you • Final settlement is subject to your bank/UPI app
             </p>
 
             <div className="mb-8 p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-left text-sm space-y-3">

@@ -2,15 +2,6 @@ export type PlanStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIR
 export type ItemStatus = 'NOT_STARTED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'LOCKED';
 export type PaymentStatus = 'CREATED' | 'INITIATED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
 
-export interface User {
-  id: string;
-  email: string;
-  phone?: string;
-  name: string;
-  role: 'user' | 'admin';
-  createdAt: string;
-}
-
 export interface SplitPlan {
   id: string;
   publicId: string;
@@ -79,36 +70,6 @@ export interface ParsedUPI {
   rawUri?: string;
   isValid: boolean;
   validationErrors: string[];
-}
-
-export interface WebhookEvent {
-  id: string;
-  provider: string;
-  eventId: string;
-  eventType: string;
-  payload: Record<string, any>;
-  signatureValid: boolean;
-  processed: boolean;
-  createdAt: string;
-}
-
-export interface AuditLog {
-  id: string;
-  userId?: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  requestId: string;
-  metadata?: Record<string, any>;
-  createdAt: string;
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  code?: string;
-  message?: string;
-  data?: T;
-  requestId: string;
 }
 
 export interface UPITaxCategory {

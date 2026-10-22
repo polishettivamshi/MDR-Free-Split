@@ -1,28 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import jsQR from 'jsqr';
-import { 
-  Camera, 
-  Upload, 
-  CheckCircle2, 
-  AlertCircle, 
-  Layers, 
-  ArrowRight, 
-  RefreshCw, 
-  ShieldCheck, 
-  Store, 
-  IndianRupee, 
-  Edit3, 
-  Sparkles,
+import {
+  Camera,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  RefreshCw,
+  ShieldCheck,
+  Store,
+  Edit3,
   X,
   QrCode,
-  Percent,
-  TrendingDown,
-  Info
+  Percent
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { parseUPIUri, formatINR } from '../lib/upi';
 import { ParsedUPI, SplitPlan } from '../types';
 import { PaymentGatewayIcon } from './PaymentGatewayIcon';
-import { GoogleAdSlot } from './GoogleAdSlot';
 import { CameraQRScanner } from './CameraQRScanner';
 import { UPITaxAdvisor } from './UPITaxAdvisor';
 import { localStore } from '../lib/localStore';
@@ -99,7 +94,8 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
   // Image Upload Parser
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -110,22 +106,32 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, img.width, img.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'attemptBoth'
-          });
-          if (code && code.data) {
-            handleScannedData(code.data);
-          } else {
-            setApiError('No readable UPI QR code was detected in this image. Please try another image or enter UPI ID manually.');
-          }
+        if (!ctx) {
+          setApiError('Could not read this image. Please try another image or enter the UPI ID manually.');
+          return;
         }
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        if (code && code.data) {
+          handleScannedData(code.data);
+        } else {
+          setApiError('No readable UPI QR code was detected in this image. Please try another image or enter UPI ID manually.');
+        }
+      };
+      img.onerror = () => {
+        setApiError('This image could not be opened. Please choose a PNG, JPG, or WEBP file.');
       };
       img.src = event.target?.result as string;
     };
+    reader.onerror = () => {
+      setApiError('The selected file could not be read. Please try another image.');
+    };
     reader.readAsDataURL(file);
+    // Allow selecting the same file again after an error.
+    input.value = '';
   };
 
   const handleScannedData = (rawText: string, preParsed?: ParsedUPI) => {
@@ -158,18 +164,18 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
   const handleAmountInputChange = (val: string) => {
     setAmountInputStr(val);
     const parsed = parseFloat(val);
-    if (!isNaN(parsed) && parsed > 0) {
-      setTotalAmount(parsed);
-    }
+    setTotalAmount(!isNaN(parsed) && parsed > 0 ? parsed : 0);
   };
 
   // Handle custom installment amount edit
   const handleCustomAmountChange = (index: number, val: string) => {
-    const num = parseFloat(val) || 0;
+    const num = parseFloat(val);
     const updated = [...splitAmounts];
-    updated[index] = num;
+    updated[index] = Number.isFinite(num) && num > 0 ? Math.round(num * 100) / 100 : 0;
     setSplitAmounts(updated);
   };
+
+  const maxZeroMdrSplits = totalAmount > 0 ? Math.max(2, Math.ceil(totalAmount / THRESHOLD)) : null;
 
   // Create Split Plan Submission (client-side localStorage storage)
   const handleSubmitPlan = async () => {
@@ -204,7 +210,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
       });
 
       onPlanCreated(plan);
-    } catch (err: any) {
+    } catch {
       setApiError('Failed to create split plan. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -320,7 +326,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           {/* QR Method Tabs */}
           <div className="flex p-1 bg-slate-100 rounded-2xl text-xs font-bold sm:flex-nowrap flex-wrap">
             {['scan', 'upload', 'manual'].map((method) => {
-              const labels: Record<string, { icon: any; label: string }> = {
+              const labels: Record<string, { icon: LucideIcon; label: string }> = {
                 scan: { icon: Camera, label: 'Scan Camera' },
                 upload: { icon: Upload, label: 'Upload QR' },
                 manual: { icon: Edit3, label: 'Manual Input' }
@@ -392,7 +398,12 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   onChange={(e) => {
                     const text = e.target.value;
                     const parsed = parseUPIUri(text);
-                    setParsedUPI({ ...parsed, pa: text });
+                    setParsedUPI({
+                      ...parsed,
+                      pa: text,
+                      isValid: parsed.isValid,
+                    });
+                    setScanSuccessNotification(null);
                   }}
                   placeholder="e.g. store@upi"
                   className="input-premium"
@@ -405,7 +416,10 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 <input
                   type="text"
                   value={parsedUPI.pn}
-                  onChange={(e) => setParsedUPI({ ...parsedUPI, pn: e.target.value })}
+                  onChange={(e) => {
+                    setParsedUPI({ ...parsedUPI, pn: e.target.value });
+                    setScanSuccessNotification(null);
+                  }}
                   placeholder="e.g. ABC Store"
                   className="input-premium"
                 />
@@ -423,11 +437,20 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                     Decoded Merchant Information
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  VPA Verified
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  parsedUPI.isValid
+                    ? 'text-emerald-700 bg-emerald-100'
+                    : 'text-rose-700 bg-rose-100'
+                }`}>
+                  <ShieldCheck className={`w-3 h-3 ${parsedUPI.isValid ? 'text-emerald-600' : 'text-rose-500'}`} />
+                  {parsedUPI.isValid ? 'VPA Verified' : 'VPA Not Verified'}
                 </span>
               </div>
+              {!parsedUPI.isValid && parsedUPI.validationErrors.length > 0 && (
+                <p className="mb-3 text-[11px] font-medium text-rose-600">
+                  {parsedUPI.validationErrors[0]}
+                </p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="block text-xs text-slate-500 font-medium mb-1">Merchant</span>
@@ -571,10 +594,19 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             >
               Custom Amounts
             </button>
+            {splitMode === 'custom' && (
+              <button
+                type="button"
+                onClick={() => setSplitAmounts(computeEqualSplits(totalAmount, numberOfPayments))}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors"
+              >
+                Reset evenly
+              </button>
+            )}
           </div>
 
           {/* Payment count buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 mb-6">
             {[2, 3, 4, 5, 6, 8].map((count) => {
               const perSplit = totalAmount / count;
               const isExempt = perSplit <= THRESHOLD;
@@ -583,14 +615,14 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   key={count}
                   type="button"
                   onClick={() => setNumberOfPayments(count)}
-                  className={`py-2 px-1 rounded-xl text-center border transition-all duration-200 cursor-pointer min-h-[44px] flex flex-col items-center justify-center ${
+                  className={`py-1.5 px-1 rounded-xl text-center border transition-all duration-200 cursor-pointer min-h-[40px] flex flex-col items-center justify-center gap-0.5 ${
                     numberOfPayments === count
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
                       : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
                   }`}
                 >
-                  <span className="text-[10px] font-bold">{count}x</span>
-                  <span className={`text-[8px] font-bold mt-0.5 ${
+                  <span className="text-[9px] font-bold">{count}x</span>
+                  <span className={`text-[7px] font-bold mt-0 ${
                     isExempt ? 'text-emerald-600' : 'text-amber-600'
                   }`}>
                     {isExempt ? '0% MDR' : 'MDR'}
@@ -598,28 +630,41 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 </button>
               );
             })}
-            <div className={`p-1 rounded-xl border flex flex-col items-center justify-center min-h-[44px] ${numberOfPayments > 8 ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white'}`}>
-              <span className="text-[9px] font-bold text-slate-500 uppercase">Custom</span>
-              <div className="flex items-center gap-1 mt-1">
+            <div className={`p-1 rounded-xl border flex flex-col items-center justify-center min-h-[40px] gap-0.5 ${numberOfPayments > 8 ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white'}`}>
+              <span className="text-[8px] font-bold text-slate-500 uppercase">Custom</span>
+              <div className="flex items-center gap-0.5 mt-0.5">
                 <button
+                  type="button"
                   onClick={() => setNumberOfPayments(Math.max(2, numberOfPayments - 1))}
-                  className="w-5 h-5 rounded bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                  aria-label="Decrease number of payments"
+                  className="w-4 h-4 rounded bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center cursor-pointer"
                 >
-                  -
+                  −
                 </button>
                 <span className="text-xs font-bold text-slate-900 w-5 text-center">{numberOfPayments}</span>
                 <button
+                  type="button"
                   onClick={() => setNumberOfPayments(numberOfPayments + 1)}
-                  className="w-5 h-5 rounded bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                  aria-label="Increase number of payments"
+                  className="w-4 h-4 rounded bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center cursor-pointer"
                 >
                   +
                 </button>
               </div>
-              <p className="text-[8px] text-slate-500 mt-1">
-                Max {Math.ceil(totalAmount / THRESHOLD)} for 0% MDR
+              <p className="text-[7px] text-slate-500 mt-0.5">
+                {maxZeroMdrSplits ? `Max ${maxZeroMdrSplits} for 0% MDR` : 'Enter amount'}
               </p>
             </div>
           </div>
+
+          {/* Live UPI Tax & Surcharge Advisor */}
+          <UPITaxAdvisor
+            totalAmount={totalAmount}
+            numberOfPayments={numberOfPayments}
+            splitAmounts={splitAmounts}
+            onSelectSplitCount={setNumberOfPayments}
+            className="mb-6"
+          />
 
           {/* Installment Breakdown */}
           <div className="space-y-3">
@@ -672,7 +717,19 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
+                      {splitMode === 'custom' ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={amt}
+                          onChange={(e) => handleCustomAmountChange(idx, e.target.value)}
+                          aria-label={`Payment ${idx + 1} amount`}
+                          className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-sm font-bold text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
+                      )}
                       <span className={`text-[9px] font-bold ${exceedsThreshold ? 'text-amber-700' : 'text-emerald-700'}`}>
                         MDR: {exceedsThreshold ? `0.4% (${formatINR(instTax)})` : '₹0.00 (0%)'}
                       </span>
@@ -713,7 +770,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Authorized via</span>
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Authorized via</span>
             </div>
             <div className="flex flex-wrap gap-3">
               {['phonepe', 'gpay', 'paytm', 'bhim', 'cred', 'amazonpay', 'navi', 'other'].map((gw) => (
@@ -724,11 +781,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Google Ad Slot */}
-        <div className="mt-8 reveal stagger-5">
-          <GoogleAdSlot placement="compact" slot="createSplit" className="mb-6" />
         </div>
 
         {/* Action Buttons */}
@@ -742,7 +794,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           <button
             id="create-payment-plan-submit-btn"
             type="button"
-            disabled={!isSplitValid || isSubmitting || !parsedUPI.pa}
+            disabled={!isSplitValid || isSubmitting || !parsedUPI.pa || !parsedUPI.isValid}
             onClick={handleSubmitPlan}
             className="w-full sm:w-auto flex-1 btn-primary min-h-[52px] px-10 text-base"
           >

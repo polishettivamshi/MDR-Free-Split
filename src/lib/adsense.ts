@@ -1,13 +1,10 @@
 /**
  * Google AdSense configuration.
  *
- * The publisher ID is a PUBLIC identifier — it is embedded in every ad tag
- * served to visitors, so hardcoding it is safe. We still prefer
- * VITE_ADSENSE_PUBLISHER_ID so the ID can be changed without a code deploy
- * (set it in Vercel → Project Settings → Environment Variables).
- *
- * The hardcoded fallback matters because `.env` is git-ignored: without it the
- * ad script would request `client=undefined` on the deployed build.
+ * This project deliberately does NOT use environment variables: the publisher
+ * ID is a PUBLIC identifier that is embedded in every ad tag served to
+ * visitors, so it is safe to hardcode. Update `ADSENSE_CLIENT` here (and the
+ * loader tag in `index.html`) when the account changes, then rebuild.
  */
 export const ADSENSE_CLIENT = 'ca-pub-6633100438556373';
 
@@ -22,21 +19,16 @@ export const isValidAdsenseClient = (value: unknown): value is string =>
 
 /**
  * Resolve the active AdSense publisher ID.
- * Falls back to the hardcoded public ID when the env var is unavailable.
  * Returns an empty string when no valid publisher ID can be determined.
  */
-export const resolveAdsenseClient = (): string => {
-  const fromEnv = import.meta.env.VITE_ADSENSE_PUBLISHER_ID;
-  if (isValidAdsenseClient(fromEnv)) return fromEnv.trim();
-  if (isValidAdsenseClient(ADSENSE_CLIENT)) return ADSENSE_CLIENT;
-  return '';
-};
+export const resolveAdsenseClient = (): string =>
+  isValidAdsenseClient(ADSENSE_CLIENT) ? ADSENSE_CLIENT.trim() : '';
 
 /**
  * Optional ad unit slot IDs.
  *
- * Leave a slot empty to serve the slot through AdSense Auto ads, which is the
- * default and works as soon as the site is approved. To pin a slot to a
+ * Leave a slot empty to serve the placement through AdSense Auto ads, which is
+ * the default and works as soon as the site is approved. To pin a slot to a
  * specific ad unit, create the unit in AdSense (Ad units → New ad unit) and
  * paste its slot ID here.
  */
@@ -53,9 +45,21 @@ export type AdsenseSlotKey = keyof typeof ADSENSE_SLOTS;
  */
 export const resolveSlotId = (key: AdsenseSlotKey): string => ADSENSE_SLOTS[key] ?? '';
 
+/**
+ * Shape of the global `adsbygoogle` object.
+ *
+ * Before the loader boots, `window.adsbygoogle` is a plain array used as a
+ * queue. Once Google's loader has executed it replaces that array with an
+ * object exposing `push()` and `loaded: true`.
+ */
+interface AdsenseGlobal {
+  loaded?: boolean;
+  push: (payload: unknown) => void;
+}
+
 declare global {
   interface Window {
-    adsbygoogle?: Array<unknown> & { loaded?: boolean };
+    adsbygoogle?: AdsenseGlobal;
   }
 }
 
@@ -63,6 +67,18 @@ const ADSENSE_SCRIPT_SELECTOR =
   'script[src^="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]';
 
 const ADSENSE_LOAD_TIMEOUT_MS = 10000;
+const ADSENSE_POLL_INTERVAL_MS = 100;
+
+/**
+ * The loader script lives in `index.html`, so it may already have executed
+ * before React mounts. In that case the `load` event has already fired and
+ * can no longer be observed — the only reliable signal is the loader having
+ * replaced `window.adsbygoogle` with its own object.
+ */
+const isAdsenseLoaderReady = (): boolean =>
+  typeof window !== 'undefined' &&
+  !!window.adsbygoogle &&
+  window.adsbygoogle.loaded === true;
 
 let loaderPromise: Promise<void> | null = null;
 
@@ -78,38 +94,38 @@ export const loadAdsenseScript = (client: string): Promise<void> => {
 
   loaderPromise = new Promise<void>((resolve, reject) => {
     let settled = false;
+    let pollId: ReturnType<typeof setInterval> | undefined;
 
     const succeed = () => {
       if (settled) return;
       settled = true;
+      if (pollId !== undefined) clearInterval(pollId);
+      clearTimeout(timeout);
       resolve();
     };
 
     const fail = (message: string) => {
       if (settled) return;
       settled = true;
+      if (pollId !== undefined) clearInterval(pollId);
+      clearTimeout(timeout);
       reject(new Error(message));
     };
 
     // Never leave the caller hanging if the loader never reports back.
     const timeout = setTimeout(() => fail('AdSense script timed out'), ADSENSE_LOAD_TIMEOUT_MS);
 
+    // Poll for the loader to announce itself (covers the "already loaded" case).
+    pollId = setInterval(() => {
+      if (isAdsenseLoaderReady()) succeed();
+    }, ADSENSE_POLL_INTERVAL_MS);
+
     const existing = document.querySelector<HTMLScriptElement>(ADSENSE_SCRIPT_SELECTOR);
 
     if (existing) {
-      if (existing.dataset.adSenseLoaded === 'true') {
-        clearTimeout(timeout);
-        succeed();
-        return;
-      }
-      existing.addEventListener('load', () => {
-        clearTimeout(timeout);
-        succeed();
-      });
-      existing.addEventListener('error', () => {
-        clearTimeout(timeout);
-        fail('AdSense script failed to load');
-      });
+      existing.addEventListener('load', () => succeed());
+      existing.addEventListener('error', () => fail('AdSense script failed to load'));
+      if (isAdsenseLoaderReady()) succeed();
       return;
     }
 
@@ -117,41 +133,42 @@ export const loadAdsenseScript = (client: string): Promise<void> => {
     script.async = true;
     script.crossOrigin = 'anonymous';
     script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
-    script.addEventListener('load', () => {
-      script.dataset.adSenseLoaded = 'true';
-      clearTimeout(timeout);
-      succeed();
-    });
-    script.addEventListener('error', () => {
-      clearTimeout(timeout);
-      fail('AdSense script failed to load');
-    });
+    script.addEventListener('load', () => succeed());
+    script.addEventListener('error', () => fail('AdSense script failed to load'));
     document.head.appendChild(script);
   });
 
   return loaderPromise;
 };
 
-// Guards against pushing the same <ins> twice (React StrictMode double-invokes
-// effects in development, which would otherwise make the loader throw
-// "'element' has already been filled").
+// Guards against pushing the same <ins> twice. React StrictMode double-invokes
+// effects in development, and the loader throws "'element' has already been
+// filled." when the same element is requested more than once.
 const pushedElements = new WeakSet<Element>();
 
 /**
  * Request an ad for a specific <ins> element.
  *
- * The loader accepts `push({ element })`, which targets the given element
- * instead of relying on document order.
+ * `push({ element })` targets the given element explicitly instead of relying
+ * on document order. The loader reads `data-ad-client`, `data-ad-slot`,
+ * `data-ad-format` and `data-full-width-responsive` straight off the element,
+ * so `data-ad-client` must be present or the loader throws
+ * "Ad client is missing from the slot.".
  */
 export const pushAdRequest = (element: Element | null): void => {
   if (!element) return;
   if (pushedElements.has(element)) return;
-  pushedElements.add(element);
+
+  const adsense = window.adsbygoogle;
+  if (!adsense || typeof adsense.push !== 'function') {
+    console.warn('[AdSense] loader is not ready — ad request skipped');
+    return;
+  }
 
   try {
-    window.adsbygoogle = window.adsbygoogle || [];
-    window.adsbygoogle.push({ element });
+    adsense.push({ element });
+    pushedElements.add(element);
   } catch (error) {
-    console.error('AdSense push failed', error);
+    console.error('[AdSense] push failed', error);
   }
 };

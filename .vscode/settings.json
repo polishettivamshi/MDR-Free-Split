@@ -1,0 +1,22 @@
+{
+  // Open all CSS files in Tailwind CSS language mode (Tailwind CSS IntelliSense).
+  // This hands CSS validation to Tailwind's Tailwind-aware server, which knows
+  // @apply / @theme / @utility etc. and no longer reports "Unknown at rule".
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+
+  // Safety net: if the Tailwind CSS IntelliSense extension is missing or disabled,
+  // VS Code's built-in CSS validator would otherwise still flag Tailwind at-rules.
+  "css.lint.unknownAtRules": "ignore",
+
+  // Generated bundles are not source. Excluding them prevents the CSS/JS
+  // language services from reporting thousands of diagnostics against minified
+  // Tailwind output (which is where most of the Problems panel noise came from).
+  "files.exclude": {
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/dist": true
+  }
+}

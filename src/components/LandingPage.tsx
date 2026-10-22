@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, ShieldCheck, Smartphone, QrCode, Lock, Layers, ChevronRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 interface LandingPageProps {
   onStartSplit: () => void;
@@ -11,7 +11,6 @@ const steps = [
     title: 'Scan Merchant QR',
     desc: 'Point your camera or upload a merchant UPI QR code to pre-fill details.',
     icon: QrCode,
-    color: 'from-indigo-100 to-indigo-50',
     iconColor: 'text-indigo-600'
   },
   {
@@ -19,7 +18,6 @@ const steps = [
     title: 'Choose Split Amount',
     desc: 'Divide bill into installments under ₹2,000 each for 0% MDR tax.',
     icon: Layers,
-    color: 'from-emerald-100 to-emerald-50',
     iconColor: 'text-emerald-600'
   },
   {
@@ -27,16 +25,15 @@ const steps = [
     title: 'Authorize in UPI App',
     desc: 'Pay each installment securely in PhonePe, Google Pay, Paytm, or BHIM.',
     icon: Smartphone,
-    color: 'from-violet-100 to-violet-50',
     iconColor: 'text-violet-600'
   }
 ];
 
 const stats = [
-  { label: '0% MDR', value: 'Tax on ≤₹2,000' },
-  { label: '0%', value: 'PIN or card stored' },
-  { label: '3', value: 'Steps to split' },
-  { label: '24/7', value: 'Local only' }
+  { value: '0%', label: 'MDR tax on payments up to ₹2,000' },
+  { value: '0', label: 'PINs or card details stored' },
+  { value: '3', label: 'Steps to split a payment' },
+  { value: '24/7', label: 'Local-only access' }
 ];
 
 const faqs = [
@@ -94,9 +91,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
         <div className="mesh-blob mesh-blob-3 animate-gradient" />
         <div className="mesh-blob mesh-blob-4 animate-gradient" />
       </div>
-
-      {/* Confetti Canvas */}
-      <canvas className="confetti-canvas" />
 
       {/* Hero Section */}
       <section className="relative pt-16 pb-32 lg:pt-24 lg:pb-40 overflow-hidden">
@@ -192,14 +186,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
       {/* Trust / Stats Section */}
       <section className="py-12 border-y border-slate-200/50 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 reveal">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 reveal">
             {stats.map((stat) => (
-              <div key={stat.value} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:bg-indigo-50 hover:border-indigo-100 transition-all duration-300">
+              <div key={stat.label} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:bg-indigo-50 hover:border-indigo-100 transition-all duration-300">
                 <div className="text-2xl sm:text-3xl font-black text-slate-900 mb-1">
-                  {stat.value.split(' ')[0]}
+                  {stat.value}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 font-medium uppercase tracking-wider">
-                  {stat.value.split(' ').slice(1).join(' ')} {stat.label}
+                  {stat.label}
                 </p>
               </div>
             ))}
@@ -216,7 +210,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
             <p>From scanning the QR to authorizing in your UPI app, complete the entire split in three steps.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 reveal stagger-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 reveal stagger-2">
             {steps.map((step) => {
               const Icon = step.icon;
               return (
