@@ -14,8 +14,9 @@ export const NotFoundPage = ({
     title: `${title} — MDR Free Split`,
     description:
       'That page could not be found. Browse the UPI guides or open the free split calculator.',
-    path: '/',
-    noindex: true
+    path: window.location.pathname || '/',
+    noindex: true,
+    canonical: false
   });
 
   return (

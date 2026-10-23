@@ -27,7 +27,18 @@ const GuideArticleContent = ({ guide }: GuideArticleContentProps) => {
     description: guide.description,
     path: `/guides/${guide.slug}`,
     type: 'article',
-    updatedAt: guide.updatedAt
+    image: '/og-image.png',
+    imageAlt: `${guide.title} — MDR Free Split`,
+    keywords: [
+      guide.category,
+      guide.title,
+      'UPI MDR 2026',
+      'UPI split payment',
+      'merchant UPI QR',
+    ],
+    publishedAt: guide.publishedAt,
+    updatedAt: guide.updatedAt,
+    section: guide.category,
   });
 
   useJsonLd('guide-article-schema', {
@@ -35,10 +46,18 @@ const GuideArticleContent = ({ guide }: GuideArticleContentProps) => {
     '@type': 'Article',
     headline: guide.title,
     description: guide.description,
+    url: absoluteUrl(`/guides/${guide.slug}`),
+    image: [absoluteUrl('/og-image.png')],
     datePublished: guide.publishedAt,
     dateModified: guide.updatedAt,
     inLanguage: 'en-IN',
     articleSection: guide.category,
+    keywords: [
+      guide.category,
+      'UPI MDR',
+      'UPI split payment',
+      'merchant UPI QR',
+    ].join(', '),
     isAccessibleForFree: true,
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -47,14 +66,18 @@ const GuideArticleContent = ({ guide }: GuideArticleContentProps) => {
     author: {
       '@type': 'Person',
       name: 'Vamshi Polishetti',
-      url: absoluteUrl('/about')
+      url: absoluteUrl('/about'),
+      sameAs: ['https://www.linkedin.com/in/polishettivamshi/']
     },
     publisher: {
       '@type': 'Organization',
       name: 'MDR Free Split',
+      url: absoluteUrl('/'),
       logo: {
         '@type': 'ImageObject',
-        url: absoluteUrl('/favicon.svg')
+        url: absoluteUrl('/logo.png'),
+        width: 512,
+        height: 512
       }
     }
   });

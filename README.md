@@ -172,19 +172,20 @@ Split-upi/
 
 ## Deployment
 
-MDR Free Split is a static single-page app. `npm run build` emits `dist/`; the live site runs on Vercel.
+MDR Free Split is a static single-page app. `npm run build` runs Vite and then `scripts/prerender-seo.ts`, which emits `dist/` with route-specific HTML shells, canonical/social tags, JSON-LD, static fallback content and a regenerated sitemap. The live site runs on Vercel.
 
 Before deploying:
 
-- Confirm `SITE_URL` in `site.config.ts` matches the deployment domain.
+- Confirm `SITE_URL` in `site.config.ts`, `index.html`, `public/robots.txt` and `public/sitemap.xml` match the deployment domain.
 - Keep `public/googlee1c80eb3c72a40ab.html` in the deployment. Google Search Console verification expects exactly:
 
 ```text
 google-site-verification: googlee1c80eb3c72a40ab.html
 ```
 
-- Confirm `vercel.json` is present so `/guides`, `/about`, `/privacy` and other deep links resolve to the SPA shell.
+- Confirm `vercel.json` is present. It enables `cleanUrls`, serves the prerendered route files, rewrites `/plan/<id>` to the plan shell, and returns `404.html` for unknown paths.
 - Confirm `public/ads.txt` still contains the correct publisher line.
+- Confirm the build log reports `SEO metadata written for ... routes` and no unresolved `%SITE_URL%` placeholder.
 
 After deployment, verify the verification file and a guide deep link directly:
 

@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
-Disallow: /split
-Disallow: /plan/
 
-Sitemap: %SITE_URL%/sitemap.xml
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+Sitemap: https://mdr-free-split.vercel.app/sitemap.xml

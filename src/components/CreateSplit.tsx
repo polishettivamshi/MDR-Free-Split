@@ -19,10 +19,11 @@ import { parseUPIUri, formatINR } from '../lib/upi';
 import { ParsedUPI, SplitPlan } from '../types';
 import { CameraQRScanner } from './CameraQRScanner';
 import { UPITaxAdvisor } from './UPITaxAdvisor';
-import { localStore } from '../lib/localStore';
+import { localStore, PLAN_RETENTION_DAYS } from '../lib/localStore';
 import { decodeQrFromImage } from '../lib/qrImage';
 import { usePageMeta } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
+import { PageAdZone } from './PageAdZone';
 
 interface CreateSplitProps {
   onPlanCreated: (plan: SplitPlan) => void;
@@ -35,8 +36,8 @@ const MDR_CAP_THRESHOLD = 75000;
 
 function computeMDR(amount: number): number {
   if (amount <= THRESHOLD) return 0;
-  const tax = amount * RATE;
-  return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(tax * 100) / 100;
+  const baseMDR = amount * RATE;
+  return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(baseMDR * 100) / 100;
 }
 
 export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated }) => {
@@ -892,6 +893,68 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated }) => {
           merchant directly in your UPI app; no PIN is entered or stored here.
         </p>
       </div>
+
+      {/* Editorial context for the calculator and future ad area */}
+      <section className="mt-14 border-t border-line-soft pt-10 reveal">
+        <div className="max-w-3xl">
+          <div className="kicker">Before you create the plan</div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            How the split calculator fits into a UPI payment
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-muted">
+            The calculator compares installment counts and shows the standard
+            ₹2,000 threshold arithmetic. It does not change the merchant’s
+            category, decide how a merchant should bill, or collect the payment.
+            The amount you approve in your UPI app goes to the merchant; any MDR
+            is handled in the merchant’s settlement arrangement.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">1. Check the merchant</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              Use the QR code shown at the counter or supplied by the merchant.
+              Confirm the UPI ID and the total before creating a plan.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">2. Treat the MDR as an estimate</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              Category rates, GST and provider terms can differ. The standard
+              figures shown here are not a merchant settlement statement.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">3. Pay in your own app</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              Open each installment in PhonePe, Google Pay, Paytm, BHIM or another
+              UPI app. Your PIN and payment confirmation stay in that app.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-5 text-xs leading-6 text-muted">
+          Read the source-linked guides on{' '}
+          <a
+            href="/guides/upi-mdr-in-2026"
+            className="font-semibold text-brand-dark underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+          >
+            UPI MDR in 2026
+          </a>{' '}
+          and{' '}
+          <a
+            href="/guides/merchant-upi-qr-safety"
+            className="font-semibold text-brand-dark underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+          >
+            merchant QR safety
+          </a>{' '}
+          before relying on a split for a large payment. Plans are stored only in
+          this browser and clear automatically after {PLAN_RETENTION_DAYS} days.
+        </p>
+
+        <PageAdZone page="split" slot="split" className="mt-8" />
+      </section>
     </div>
   );
 };

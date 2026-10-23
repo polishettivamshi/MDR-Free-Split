@@ -4,9 +4,12 @@ import { SplitPlan } from '../types';
 import { PLAN_RETENTION_DAYS } from '../lib/localStore';
 import { formatINR } from '../lib/upi';
 import { FEATURED_GUIDES } from '../content/guides';
-import { usePageMeta } from '../lib/seo';
+import { HOME_FAQS } from '../content/homeFaqs';
+import { SITE_KEYWORDS } from '../../site.config';
+import { usePageMeta, useJsonLd } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
 import { GuideCard } from './content/GuideCard';
+import { PageAdZone } from './PageAdZone';
 
 interface LandingPageProps {
   recentPlans: SplitPlan[];
@@ -43,35 +46,26 @@ const stats = [
   { value: '7d', label: 'Local plan retention' }
 ];
 
-const faqs = [
-  {
-    q: 'What is MDR Free Split?',
-    a: 'MDR Free Split divides a merchant UPI bill into installments and shows how the standard ₹2,000 threshold affects an MDR estimate. It is a calculator and planner, not a payment service. The merchant’s actual MDR depends on their classification, category, provider fees and GST.'
-  },
-  {
-    q: 'Does it store my UPI PIN?',
-    a: 'Never. You enter your UPI PIN only inside your official UPI app (PhonePe, Google Pay, Paytm, BHIM). MDR Free Split never sees, collects, or stores your PIN, OTP, or card data.'
-  },
-  {
-    q: 'Which UPI apps work?',
-    a: 'Any NPCI-compliant UPI app can be used, including PhonePe, Google Pay, Paytm, BHIM, CRED, Amazon Pay, Navi, and bank UPI apps from HDFC, ICICI, SBI, Axis, and others.'
-  },
-  {
-    q: 'Is it free to use?',
-    a: 'Yes. MDR Free Split is completely free. There are no platform fees, no hidden charges, and no subscriptions. Everything runs locally in your browser.'
-  },
-  {
-    q: 'Does MDR Free Split take payments or issue refunds?',
-    a: 'No. It only calculates a split and opens a UPI payment link. You pay the merchant directly in your own UPI app. This site does not collect funds, confirm payments, or issue refunds; any refund request must be handled by the merchant.'
-  }
-];
-
 export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
   usePageMeta({
-    title: 'MDR Free Split – UPI MDR Calculator, Split Planner & Guides',
+    title: 'UPI MDR Calculator & Split Payment Planner | MDR Free Split',
     description:
-      'Scan a merchant UPI QR, split a bill into installments and open each payment in your own UPI app. Free calculator, local-only plans and source-linked 2026 MDR guides.',
-    path: '/'
+      'Free UPI MDR calculator and split payment planner. Scan a merchant QR, split a bill into installments, estimate the ₹2,000 threshold and open your own UPI app.',
+    path: '/',
+    keywords: SITE_KEYWORDS,
+  });
+
+  useJsonLd('homepage-faq-schema', {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: HOME_FAQS.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
   });
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -369,6 +363,78 @@ export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
         </div>
       </section>
 
+      {/* MDR essentials and content-adjacent ad area */}
+      <section className="border-b border-line/60 bg-white py-16 lg:py-20 reveal">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:items-start">
+            <div className="reveal stagger-1">
+              <div className="kicker">MDR essentials</div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                What the ₹2,000 threshold means for a merchant payment
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-muted sm:text-base">
+                The notified 2026 UPI framework uses a per-transaction threshold
+                for standard person-to-merchant payments. At or below ₹2,000, the
+                base MDR is zero. Above ₹2,000, the standard rate is 0.4%, capped
+                at ₹300 per transaction from ₹75,000. GST, the merchant’s category
+                and provider terms can change the final amount.
+              </p>
+              <p className="mt-3 text-sm leading-7 text-muted sm:text-base">
+                NPCI has said implementation on select P2M transactions will begin
+                after Diwali at a date to be notified separately. Splitting a bill
+                creates separate UPI payment instructions; it does not change the
+                merchant’s classification or guarantee a particular MDR outcome.
+                Confirm any part-payment arrangement with the merchant.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3">
+                <a
+                  href="/guides/upi-mdr-in-2026"
+                  className="inline-flex min-h-11 items-center text-sm font-bold text-brand-dark underline decoration-brand/30 underline-offset-4 hover:decoration-brand"
+                >
+                  Read the 2026 MDR guide
+                </a>
+                <a
+                  href="/guides/how-to-split-upi-payment"
+                  className="inline-flex min-h-11 items-center text-sm font-bold text-brand-dark underline decoration-brand/30 underline-offset-4 hover:decoration-brand"
+                >
+                  How split planning works
+                </a>
+              </div>
+            </div>
+
+            <aside className="rounded-3xl border border-line bg-lilac/70 p-5 sm:p-6 reveal stagger-2">
+              <h3 className="text-sm font-black uppercase tracking-wider text-ink">
+                Quick check
+              </h3>
+              <dl className="mt-4 space-y-3">
+                <div className="flex items-start justify-between gap-3 border-b border-line/70 pb-3">
+                  <dt className="text-xs font-medium text-muted">₹2,000 or less</dt>
+                  <dd className="shrink-0 text-xs font-black text-emerald-700">0% base MDR</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3 border-b border-line/70 pb-3">
+                  <dt className="text-xs font-medium text-muted">Above ₹2,000</dt>
+                  <dd className="shrink-0 text-xs font-black text-ink">0.4% standard</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3 border-b border-line/70 pb-3">
+                  <dt className="text-xs font-medium text-muted">₹75,000 or more</dt>
+                  <dd className="shrink-0 text-xs font-black text-ink">₹300 cap</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-xs font-medium text-muted">Who pays MDR</dt>
+                  <dd className="shrink-0 text-xs font-black text-ink">Merchant</dd>
+                </div>
+              </dl>
+              <p className="mt-4 text-[11px] leading-5 text-muted">
+                Estimates only. Category rates, GST and provider fees may differ.
+                P2P transfers remain free.
+              </p>
+            </aside>
+          </div>
+
+          <PageAdZone page="home" slot="home" className="mt-8" />
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <section className="py-20 lg:py-32 bg-white border-t border-line/50 reveal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -379,7 +445,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
           </div>
 
           <div className="space-y-3 reveal stagger-2 max-w-3xl mx-auto">
-            {faqs.map((faq, index) => {
+            {HOME_FAQS.map((faq, index) => {
               const isOpen = activeFaq === index;
               return (
                 <div

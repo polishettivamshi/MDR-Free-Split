@@ -29,10 +29,17 @@ const cannotHelp = [
 
 export const ContactPage = () => {
   usePageMeta({
-    title: 'Contact MDR Free Split',
+    title: 'Contact MDR Free Split — Corrections & Support',
     description:
       'Contact MDR Free Split about calculator feedback, guide corrections, privacy requests or a broken link. Never send a UPI PIN, OTP or bank credentials.',
-    path: '/contact'
+    path: '/contact',
+    keywords: [
+      'contact MDR Free Split',
+      'UPI calculator support',
+      'UPI guide correction',
+      'privacy request',
+      'Vamshi Polishetti contact',
+    ],
   });
 
   return (

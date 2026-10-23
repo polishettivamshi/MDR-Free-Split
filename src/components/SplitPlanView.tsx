@@ -20,6 +20,7 @@ import { formatINR } from '../lib/upi';
 import { usePageMeta } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
 import { UpiAppIcon } from './UpiAppIcon';
+import { PageAdZone } from './PageAdZone';
 
 interface SplitPlanViewProps {
   planId: string;
@@ -384,9 +385,70 @@ export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId }) => {
         </div>
       </div>
 
+      {/* Editorial context for a saved plan and future ad area */}
+      <section className="mt-12 border-t border-line-soft pt-10 reveal">
+        <div className="max-w-3xl">
+          <div className="kicker">Before you pay an installment</div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            Check the plan, then confirm the payment in your UPI app
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-muted">
+            Open the plan only on a device you control. It is saved in this
+            browser and is removed automatically after {PLAN_RETENTION_DAYS} days.
+            The plan is a calculation aid, not a payment receipt or proof that a
+            merchant has agreed to accept part-payments.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">Check the payee</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              Before entering your PIN, confirm the merchant name, UPI ID and
+              installment amount shown in your UPI app.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">Keep the plan private</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              Plan details are stored locally in this browser. Avoid opening a
+              saved plan on a shared or public device.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-line bg-lilac/60 p-4">
+            <h3 className="text-sm font-bold text-ink">No payment confirmation</h3>
+            <p className="mt-1.5 text-xs leading-6 text-muted">
+              This site does not collect funds, verify that an installment was
+              paid, or issue refunds. Use your UPI app and the merchant for that.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-5 text-xs leading-6 text-muted">
+          For a safer payment, read{' '}
+          <a
+            href="/guides/upi-payment-safety"
+            className="font-semibold text-brand-dark underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+          >
+            UPI payment safety
+          </a>{' '}
+          and{' '}
+          <a
+            href="/guides/how-to-split-upi-payment"
+            className="font-semibold text-brand-dark underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+          >
+            how to split a UPI payment
+          </a>
+          . MDR figures remain estimates; the merchant’s category and provider
+          terms determine the actual charge.
+        </p>
+
+        <PageAdZone page="plan" slot="plan" className="mt-8" />
+      </section>
+
       {activeInstallment && createPortal(
         <div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-70 flex items-end justify-center bg-ink/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onMouseDown={closeModal}
         >
           <div

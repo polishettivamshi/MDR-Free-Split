@@ -64,7 +64,7 @@ const aboutBlocks: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: 'Editorial guide pages may display advertising through Google AdSense. The calculator and plan screens are kept free of the advertising script. Advertising does not change the calculator’s arithmetic, the choice of guide topics or the conclusions in an article. We do not accept payment for a favourable explanation of a bank, payment provider or merchant.'
+    text: 'Advertising may appear in the explanatory content sections of guide pages and, when enabled, below the homepage, calculator and saved-plan content. Ads are kept out of the QR scanner, calculator form, installment buttons and payment dialog. Advertising does not change the calculator’s arithmetic, the choice of guide topics or the conclusions in an article. We do not accept payment for a favourable explanation of a bank, payment provider or merchant.'
   },
   { type: 'h2', text: 'Corrections and contact' },
   {
@@ -88,10 +88,17 @@ const aboutBlocks: ContentBlock[] = [
 
 export const AboutPage = () => {
   usePageMeta({
-    title: 'About MDR Free Split — Independent UPI Calculator',
+    title: 'About MDR Free Split — Independent UPI MDR Calculator',
     description:
-      'Learn who builds MDR Free Split, what the UPI calculator does and does not do, how the guides are researched, and how to request a correction.',
-    path: '/about'
+      'Learn who builds MDR Free Split, what the UPI split calculator does and does not do, how the guides are researched, and how to request a correction.',
+    path: '/about',
+    keywords: [
+      'about MDR Free Split',
+      'independent UPI calculator',
+      'UPI MDR calculator India',
+      'Vamshi Polishetti',
+      'UPI split planner',
+    ],
   });
 
   return (

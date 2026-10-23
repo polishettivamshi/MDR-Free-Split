@@ -6,8 +6,9 @@
  * visitors, so it is safe to hardcode. Update `ADSENSE_CLIENT` here when the
  * account changes, then rebuild.
  *
- * The loader is injected only on editorial routes by App.tsx. Calculator,
- * plan, home and legal screens intentionally do not load it.
+ * The loader is injected on editorial routes by App.tsx. Ads on the homepage,
+ * calculator and plan screens are opt-in and stay disabled until the flags
+ * below are switched on after AdSense approval.
  */
 export const ADSENSE_CLIENT = 'ca-pub-6633100438556373';
 
@@ -37,9 +38,35 @@ export const resolveAdsenseClient = (): string =>
  */
 export const ADSENSE_SLOTS = {
   guides: '',
+  home: '',
+  split: '',
+  plan: '',
 } as const;
 
 export type AdsenseSlotKey = keyof typeof ADSENSE_SLOTS;
+
+/**
+ * Per-page AdSense switches for the homepage, calculator and plan screens.
+ *
+ * Leave every flag `false` while the site is under review. After approval:
+ *   1. Create the matching ad unit in AdSense and paste its slot ID into
+ *      `ADSENSE_SLOTS` above.
+ *   2. Set the page's flag to `true`.
+ *   3. Rebuild and deploy.
+ *
+ * When a flag is `true` but its slot ID is still empty, App.tsx loads Auto ads
+ * on that page. The manual placement renders nothing until a slot ID is added.
+ */
+export type AdsensePageKey = 'home' | 'split' | 'plan';
+
+export const ADSENSE_PAGE_FLAGS: Record<AdsensePageKey, boolean> = {
+  home: false,
+  split: false,
+  plan: false,
+};
+
+export const isAdsensePageEnabled = (page: AdsensePageKey): boolean =>
+  ADSENSE_PAGE_FLAGS[page];
 
 /**
  * Resolve the ad unit slot ID for a given placement.

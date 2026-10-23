@@ -24,10 +24,18 @@ const editorialStandards = [
 
 export const GuidesPage = () => {
   usePageMeta({
-    title: 'UPI MDR & Payment Guides — MDR Free Split',
+    title: 'UPI MDR & Split Payment Guides (2026) — MDR Free Split',
     description:
-      'Practical, source-linked guides to UPI MDR, merchant QR codes, installment planning and payment safety in India. Written for payers and small merchants.',
-    path: '/guides'
+      'Source-linked guides to UPI MDR, the ₹2,000 threshold, merchant QR safety, split payment planning and UPI safety in India. Written for payers and small merchants.',
+    path: '/guides',
+    keywords: [
+      'UPI MDR guide',
+      'UPI split payment guide',
+      'UPI MDR 2026',
+      'merchant QR code safety',
+      'UPI payment safety',
+      'how to split a UPI payment',
+    ],
   });
 
   return (

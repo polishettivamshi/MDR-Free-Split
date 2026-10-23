@@ -14,7 +14,8 @@ export const LegalPageView = ({ doc }: LegalPageViewProps) => {
   usePageMeta({
     title: doc.metaTitle,
     description: doc.description,
-    path: doc.path
+    path: doc.path,
+    keywords: [doc.title, 'MDR Free Split', 'UPI calculator', 'UPI guides']
   });
 
   return (

@@ -14,7 +14,11 @@ import { getLegalDoc } from './content/legal';
 import { getGuide } from './content/guides';
 import { isEditorialRoute, parseCurrentRoute, routeToPath } from './lib/routes';
 import { localStore } from './lib/localStore';
-import { loadAdsenseScript, resolveAdsenseClient } from './lib/adsense';
+import {
+  isAdsensePageEnabled,
+  loadAdsenseScript,
+  resolveAdsenseClient,
+} from './lib/adsense';
 import type { SplitPlan } from './types';
 
 export default function App() {
@@ -28,11 +32,24 @@ export default function App() {
       )
   );
 
-  // Ads are deliberately limited to the editorial library. The calculator,
-  // plan screens, home page and legal pages do not load the AdSense script.
+  // Guides always load AdSense. The homepage, calculator and plan screens are
+  // opt-in through ADSENSE_PAGE_FLAGS and stay off while the site is reviewed.
   useEffect(() => {
-    if (!isEditorialRoute(route)) return;
+    const toolAdPage =
+      route.page === 'home' || route.page === 'split' || route.page === 'plan'
+        ? route.page
+        : null;
+
+    if (!isEditorialRoute(route) && !(toolAdPage && isAdsensePageEnabled(toolAdPage))) {
+      return;
+    }
+
     if (route.page === 'guide' && !getGuide(route.slug || '')) return;
+
+    // Never request an ad on a missing or expired local plan screen.
+    if (route.page === 'plan') {
+      if (!route.planId || !localStore.getPlan(route.planId)) return;
+    }
 
     const client = resolveAdsenseClient();
     if (!client) return;

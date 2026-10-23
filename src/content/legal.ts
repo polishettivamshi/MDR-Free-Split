@@ -24,7 +24,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
           'Split plans are saved in your browser, not in a server-side account.',
           'Camera frames and uploaded QR images are processed on your device for decoding.',
           'We never ask for your UPI PIN, OTP, card number or bank password.',
-          'Advertising is limited to editorial guide pages. The calculator and plan screens do not load the advertising script.'
+          'Advertising may appear on guide pages and in the explanatory content below the homepage, calculator and saved-plan sections once advertising is enabled. Ads are kept out of the QR scanner, calculator form, installment buttons and payment dialog.'
         ]
       },
       { type: 'h2', text: 'Information stored in your browser' },
@@ -53,7 +53,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
       { type: 'h2', text: 'Advertising and cookies' },
       {
         type: 'p',
-        text: 'Our editorial guide pages may use Google AdSense to display advertising. Google and its partners may use cookies or similar technologies to serve ads based on your visits to this and other websites. These technologies are controlled by Google and its partners, not by the calculator.'
+        text: 'Our content pages may use Google AdSense to display advertising. This includes the guide library and, when enabled, the explanatory content below the homepage, calculator and saved-plan sections. Google and its partners may use cookies or similar technologies to serve ads based on your visits to this and other websites. These technologies are controlled by Google and its partners, not by the calculator.'
       },
       {
         type: 'p',
@@ -75,7 +75,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
           'To operate the calculator, save plans locally and open installment payment links.',
           'To respond to questions, corrections and privacy requests.',
           'To maintain site security, diagnose errors and prevent abuse.',
-          'To display advertising on editorial pages, subject to your choices and applicable law.',
+          'To display advertising on content sections, subject to your choices and applicable law.',
           'To comply with legal obligations and enforce our terms.'
         ]
       },
