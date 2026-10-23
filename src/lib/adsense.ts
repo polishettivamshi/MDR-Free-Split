@@ -3,8 +3,11 @@
  *
  * This project deliberately does NOT use environment variables: the publisher
  * ID is a PUBLIC identifier that is embedded in every ad tag served to
- * visitors, so it is safe to hardcode. Update `ADSENSE_CLIENT` here (and the
- * loader tag in `index.html`) when the account changes, then rebuild.
+ * visitors, so it is safe to hardcode. Update `ADSENSE_CLIENT` here when the
+ * account changes, then rebuild.
+ *
+ * The loader is injected only on editorial routes by App.tsx. Calculator,
+ * plan, home and legal screens intentionally do not load it.
  */
 export const ADSENSE_CLIENT = 'ca-pub-6633100438556373';
 
@@ -33,8 +36,7 @@ export const resolveAdsenseClient = (): string =>
  * paste its slot ID here.
  */
 export const ADSENSE_SLOTS = {
-  createSplit: '',
-  paymentPlan: '',
+  guides: '',
 } as const;
 
 export type AdsenseSlotKey = keyof typeof ADSENSE_SLOTS;
@@ -70,10 +72,10 @@ const ADSENSE_LOAD_TIMEOUT_MS = 10000;
 const ADSENSE_POLL_INTERVAL_MS = 100;
 
 /**
- * The loader script lives in `index.html`, so it may already have executed
- * before React mounts. In that case the `load` event has already fired and
- * can no longer be observed — the only reliable signal is the loader having
- * replaced `window.adsbygoogle` with its own object.
+ * The loader may already exist if another editorial component mounted first.
+ * In that case the `load` event has already fired and can no longer be
+ * observed — the only reliable signal is the loader having replaced
+ * `window.adsbygoogle` with its own object.
  */
 const isAdsenseLoaderReady = (): boolean =>
   typeof window !== 'undefined' &&

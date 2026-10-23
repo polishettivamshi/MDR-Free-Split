@@ -1,6 +1,6 @@
 {
   "name": "MDR Free Split",
-  "description": "Scan a merchant UPI QR, split the bill into installments under ₹2,000, and open each installment in a UPI app. A calculator and planner only.",
+  "description": "Scan a merchant UPI QR, split a bill into installments, and open each payment in your UPI app. Includes source-linked guides to UPI MDR and payment safety. A calculator and planner only.",
   "requestFramePermissions": [
     "camera"
   ]

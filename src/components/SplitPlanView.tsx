@@ -17,13 +17,12 @@ import {
 import { SplitItem, SplitPlan } from '../types';
 import { localStore, PLAN_RETENTION_DAYS } from '../lib/localStore';
 import { formatINR } from '../lib/upi';
+import { usePageMeta } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
 import { UpiAppIcon } from './UpiAppIcon';
 
 interface SplitPlanViewProps {
   planId: string;
-  onBack: () => void;
-  onStartNew: () => void;
 }
 
 const UPI_APPS = [
@@ -81,7 +80,7 @@ function formatPlanDate(date: string): string {
   });
 }
 
-export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId, onBack, onStartNew }) => {
+export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId }) => {
   const [plan, setPlan] = useState<SplitPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeInstallment, setActiveInstallment] = useState<SplitItem | null>(null);
@@ -89,6 +88,16 @@ export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId, onBack, on
   const [copied, setCopied] = useState<'plan' | 'link' | null>(null);
   const [copyFailed, setCopyFailed] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  usePageMeta({
+    title: plan
+      ? `Split Plan for ${plan.merchantName || 'Merchant'} — MDR Free Split`
+      : 'Split Plan — MDR Free Split',
+    description:
+      'A locally saved UPI split plan. Open each installment in your own UPI app; this page does not collect or verify payments.',
+    path: `/plan/${encodeURIComponent(planId)}`,
+    noindex: true
+  });
 
   useEffect(() => {
     setPlan(localStore.getPlan(planId) || null);
@@ -212,14 +221,14 @@ export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId, onBack, on
             and open a UPI app.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <button onClick={onBack} className="btn-secondary min-h-11 px-5">
+            <a href="/" className="btn-secondary min-h-11 px-5">
               <ArrowLeft className="h-4 w-4" />
               Back to Overview
-            </button>
-            <button onClick={onStartNew} className="btn-primary min-h-11 px-5">
+            </a>
+            <a href="/split" className="btn-primary min-h-11 px-5">
               <Plus className="h-4 w-4" />
               Start a Split
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -230,13 +239,13 @@ export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId, onBack, on
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10 lg:py-14">
-      <button
-        onClick={onBack}
+      <a
+        href="/"
         className="interactive mb-6 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-brand"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         <span>Back to Overview</span>
-      </button>
+      </a>
 
       <div className="reveal stagger-1">
         <div className="glass-card rounded-3xl p-5 shadow-[0_24px_70px_-45px_rgba(17,20,57,0.35)] sm:p-7">
@@ -272,10 +281,10 @@ export const SplitPlanView: React.FC<SplitPlanViewProps> = ({ planId, onBack, on
                 {copied === 'plan' ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                 <span>{copied === 'plan' ? 'Copied' : 'Copy plan'}</span>
               </button>
-              <button onClick={onStartNew} className="btn-primary min-h-11 px-4 text-xs">
+              <a href="/split" className="btn-primary min-h-11 px-4 text-xs">
                 <Plus className="h-4 w-4" />
                 <span>New split</span>
-              </button>
+              </a>
             </div>
           </div>
 

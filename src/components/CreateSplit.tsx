@@ -21,11 +21,11 @@ import { CameraQRScanner } from './CameraQRScanner';
 import { UPITaxAdvisor } from './UPITaxAdvisor';
 import { localStore } from '../lib/localStore';
 import { decodeQrFromImage } from '../lib/qrImage';
+import { usePageMeta } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
 
 interface CreateSplitProps {
   onPlanCreated: (plan: SplitPlan) => void;
-  onCancel: () => void;
 }
 
 const THRESHOLD = 2000;
@@ -39,7 +39,15 @@ function computeMDR(amount: number): number {
   return amount >= MDR_CAP_THRESHOLD ? MDR_CAP : Math.round(tax * 100) / 100;
 }
 
-export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCancel }) => {
+export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated }) => {
+  usePageMeta({
+    title: 'Create a UPI Split Plan — MDR Free Split',
+    description:
+      'Scan a merchant UPI QR, enter the bill and create a local installment plan. No account, no PIN entry and no payment collection.',
+    path: '/split',
+    noindex: true
+  });
+
   // Step 1: Amount & Merchant QR
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [amountInputStr, setAmountInputStr] = useState<string>('');
@@ -248,20 +256,20 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10 lg:py-16">
       {/* Back & Header */}
       <div className="mb-10 reveal stagger-1">
-        <button
-          onClick={onCancel}
+        <a
+          href="/"
           className="interactive inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted hover:text-brand transition-colors duration-200"
         >
           <ArrowRight className="w-3.5 h-3.5 -rotate-180" />
           <span>Back to Home</span>
-        </button>
+        </a>
       </div>
 
       <div className="reveal stagger-2">
         <div className="flex items-center gap-2 mb-2">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-soft text-brand text-xs font-bold tracking-wider uppercase border border-brand-100">
             <ShieldCheck className="w-3 h-3" />
-            <span>0% MDR Calculator</span>
+            <span>UPI MDR Calculator</span>
           </span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight mb-1">
@@ -613,11 +621,11 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 <p className="text-xs text-muted mt-2 leading-relaxed">
                   {singleExceeds ? (
                     <>
-                      Merchant transactions above ₹2,000 attract <strong>0.4% MDR</strong> (capped at ₹300 for ₹75,000+). Split this bill into installments ≤ ₹2,000 each to stay in the <strong className="text-emerald-600 font-bold">0% MDR</strong> bracket.
+                      Merchant transactions above ₹2,000 attract a base <strong>0.4% MDR</strong> (capped at ₹300 from ₹75,000). Each installment of ₹2,000 or less sits at or below the <strong className="text-emerald-600 font-bold">standard zero-MDR threshold</strong>. Confirm any part-payment arrangement with the merchant.
                     </>
                   ) : (
                     <>
-                      This amount is ≤ ₹2,000 and qualifies for <strong className="text-emerald-600 font-bold">0% MDR exemption</strong> under NPCI rules.
+                      This amount is at or below the <strong className="text-emerald-600 font-bold">standard ₹2,000 zero-MDR threshold</strong> for eligible P2M payments. Category and GST rules may differ.
                     </>
                   )}
                 </p>
@@ -634,7 +642,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 3. Split Configuration
               </label>
               <p className="text-xs text-muted mt-0.5">
-                Choose number of installments. Keep each ≤ ₹2,000 for 0% MDR.
+                Choose the number of installments. Each ₹2,000 or less sits at the standard zero-MDR threshold.
               </p>
             </div>
           </div>
@@ -700,7 +708,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               <div className="min-w-0 text-left">
                 <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Custom installments</span>
                 <p className="text-xs text-muted mt-1">
-                  {maxZeroMdrSplits ? `Up to ${maxZeroMdrSplits} installments stay at 0% MDR` : 'Enter an amount to see the recommended count'}
+                  {maxZeroMdrSplits ? `Up to ${maxZeroMdrSplits} installments can stay at/below the threshold` : 'Enter an amount to see the recommended count'}
                 </p>
               </div>
               <div className="flex items-center justify-between min-[420px]:justify-end gap-3 shrink-0">
@@ -741,7 +749,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 Installment Breakdown
               </h4>
               <span className="text-[10px] text-muted-soft">
-                Threshold: ≤ {formatINR(THRESHOLD)} = 0% MDR
+                Standard threshold: ≤ {formatINR(THRESHOLD)} = 0% MDR
               </span>
             </div>
 
@@ -780,7 +788,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                           )}
                         </div>
                         <span className="block text-[10px] text-muted mt-0.5">
-                          Pay in any order • {exceedsThreshold ? 'Above ₹2,000 threshold' : 'Under ₹2,000: 0% MDR'}
+                          Pay in any order • {exceedsThreshold ? 'Above the ₹2,000 threshold' : 'At or below ₹2,000: 0% MDR'}
                         </span>
                       </div>
                     </div>
@@ -852,12 +860,12 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
         {/* Action Buttons */}
         <div className="mt-10 pt-6 border-t border-line-soft flex flex-col-reverse sm:flex-row gap-4 reveal stagger-5">
-          <button
-            onClick={onCancel}
+          <a
+            href="/"
             className="w-full sm:w-auto flex-1 btn-secondary min-h-13 px-8 text-base"
           >
             Cancel
-          </button>
+          </a>
           <button
             id="create-split-plan-submit-btn"
             type="button"

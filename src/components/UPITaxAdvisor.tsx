@@ -12,9 +12,9 @@ import { UPITaxRule, UPITaxCalculationResult, SplitOptionTaxComparison } from '.
 import { formatINR } from '../lib/upi';
 
 const TAX_CONFIG: UPITaxRule = {
-  effectiveDate: '2026-09-15',
-  lastUpdated: '2026-09-15',
-  authority: 'PIB Delhi - UPI MDR Framework (Payment & Settlement Systems Act, 2007)',
+  effectiveDate: '2026-10-15',
+  lastUpdated: '2026-10-23',
+  authority: 'PIB / NPCI - standard UPI MDR framework (2026)',
   currency: 'INR',
   exemptionThreshold: 2000,
   baseInterchangeRatePercent: 0.4,
@@ -191,7 +191,10 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
               </span>
             </div>
             <p className="text-xs text-muted mt-0.5">
-              Live regulation check: Transactions ≤ {formatINR(threshold)} qualify for <strong className="text-emerald-700">0% MDR Exemption</strong>.
+              Standard framework check: transactions ≤ {formatINR(threshold)} sit at the <strong className="text-emerald-700">0% base-MDR threshold</strong>.
+            </p>
+            <p className="text-[11px] font-semibold text-amber-700 mt-1">
+              Notified 2026 rate model · NPCI has deferred the start date
             </p>
           </div>
         </div>
@@ -215,11 +218,11 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
             <div className="flex-1 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="font-black text-emerald-900 uppercase tracking-wider text-[11px]">
-                  All installments are below the MDR threshold
+                  All installments are at or below the threshold
                 </span>
                 {taxCalculation.taxSaved > 0 && (
                   <span className="font-extrabold text-emerald-800 bg-white/90 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
-                    Est. MDR avoided {formatINR(taxCalculation.taxSaved)}
+                    Est. merchant MDR avoided {formatINR(taxCalculation.taxSaved)}
                   </span>
                 )}
               </div>
@@ -283,7 +286,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                 >
                   {isRecommended && !isCurrent && (
                     <span className="absolute -top-2 left-2 text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.2 rounded-full shadow-2xs">
-                      Best MDR option
+                      Lowest-MDR option
                     </span>
                   )}
 
@@ -317,7 +320,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                       : opt.isExempt ? 'text-emerald-700' : 'text-muted'
                   }`}>
                     {opt.isExempt ? (
-                      opt.savingsVsFull > 0 ? `Est. MDR avoided ${formatINR(opt.savingsVsFull)}` : '0% MDR'
+                      opt.savingsVsFull > 0 ? `Est. merchant MDR avoided ${formatINR(opt.savingsVsFull)}` : '0% MDR'
                     ) : (
                       `Est. MDR: ${formatINR(opt.totalTax)}`
                     )}
@@ -375,7 +378,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Official UPI MDR rules"
+            aria-label="Simplified UPI MDR rules"
             className="bg-white rounded-3xl max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-5 sm:p-6 shadow-2xl border border-line animate-in fade-in zoom-in-95"
           >
             <div className="flex items-center justify-between gap-3 pb-4 border-b border-line">
@@ -384,8 +387,8 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                   <Percent className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-black text-ink">Official UPI MDR Rules</h4>
-                  <p className="text-[11px] text-muted">PIB Delhi - Payment & Settlement Systems Act, 2007</p>
+                  <h4 className="text-sm font-black text-ink">UPI MDR rules — simplified</h4>
+                  <p className="text-[11px] text-muted">Notified 2026 base rates · check the start date</p>
                 </div>
               </div>
               <button
@@ -399,6 +402,13 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
             </div>
 
             <div className="mt-4 space-y-3.5 text-xs text-muted">
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 leading-relaxed text-amber-900">
+                Implementation note: NPCI announced on 13 October 2026 that the
+                new MDR on select P2M transactions would begin immediately after
+                Diwali at a date to be notified separately. This calculator
+                estimates the notified structure; confirm the current start date
+                with NPCI or your payment provider.
+              </p>
               <div className="p-3 rounded-xl bg-lilac border border-line space-y-2">
                 <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
                   <span className="font-bold text-muted">UPI Exemption Threshold:</span>
@@ -406,7 +416,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                 </div>
                 <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
                   <span className="font-bold text-muted">Transactions ≤ ₹2,000:</span>
-                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">0% Free (Zero MDR)</span>
+                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">0% base MDR</span>
                 </div>
                 <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
                   <span className="font-bold text-muted">MDR (&gt; ₹2,000):</span>
@@ -426,10 +436,18 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                 <h5 className="font-bold text-ink mb-1">How the ₹2,000 threshold works:</h5>
                 <p className="text-muted leading-relaxed">
                   When a large bill (for example ₹6,000) is paid in one go, it crosses the ₹2,000
-                  MDR threshold and can attract 0.4% MDR. Splitting it into 3 installments of
-                  ₹2,000 each keeps every installment at the 0% MDR threshold. MDR, where
-                  applicable, is paid by the merchant.
+                  threshold and can attract 0.4% base MDR. Splitting it into 3 installments of
+                  ₹2,000 each keeps every installment at or below the standard threshold. This
+                  is an estimate: category rates, GST and provider terms may differ, and MDR,
+                  where applicable, is paid by the merchant. Confirm any part-payment arrangement
+                  with the merchant.
                 </p>
+                <a
+                  href="/guides/upi-mdr-in-2026"
+                  className="mt-3 inline-flex min-h-11 items-center text-xs font-bold text-brand hover:text-brand-dark hover:underline"
+                >
+                  Read the full 2026 MDR guide
+                </a>
               </div>
 
               <div className="p-3 rounded-xl bg-brand-soft/80 border border-brand-200 text-ink">

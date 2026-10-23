@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /split
+Disallow: /plan/
 
 Sitemap: %SITE_URL%/sitemap.xml

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2, Clock3, Store } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2, Clock3, Store, BookOpen } from 'lucide-react';
 import { SplitPlan } from '../types';
 import { PLAN_RETENTION_DAYS } from '../lib/localStore';
 import { formatINR } from '../lib/upi';
+import { FEATURED_GUIDES } from '../content/guides';
+import { usePageMeta } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
+import { GuideCard } from './content/GuideCard';
 
 interface LandingPageProps {
-  onStartSplit: () => void;
   recentPlans: SplitPlan[];
-  onOpenPlan: (planId: string) => void;
 }
 
 const steps = [
@@ -22,7 +23,7 @@ const steps = [
   {
     num: '2',
     title: 'Choose Split Amount',
-    desc: 'Divide the bill into installments under ₹2,000 each for 0% MDR.',
+    desc: 'Divide the bill into installments and see where the standard ₹2,000 zero-MDR threshold applies.',
     icon: Layers,
     iconWrap: 'bg-linear-to-br from-[#8b5cf6] to-[#d946ef] text-white shadow-[#8b5cf6]/25'
   },
@@ -36,16 +37,16 @@ const steps = [
 ];
 
 const stats = [
-  { value: '0%', label: 'MDR on payments up to ₹2,000' },
+  { value: '0%', label: 'Standard MDR on eligible payments up to ₹2,000' },
   { value: '0', label: 'PINs or card details stored' },
   { value: '3', label: 'Steps to split a bill' },
-  { value: '24/7', label: 'Local-only access' }
+  { value: '7d', label: 'Local plan retention' }
 ];
 
 const faqs = [
   {
     q: 'What is MDR Free Split?',
-    a: 'MDR Free Split divides a merchant UPI bill into installments under ₹2,000 each, so every installment can stay within the 0% MDR threshold. It is a calculator and planner, not a payment service.'
+    a: 'MDR Free Split divides a merchant UPI bill into installments and shows how the standard ₹2,000 threshold affects an MDR estimate. It is a calculator and planner, not a payment service. The merchant’s actual MDR depends on their classification, category, provider fees and GST.'
   },
   {
     q: 'Does it store my UPI PIN?',
@@ -65,7 +66,14 @@ const faqs = [
   }
 ];
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPlans, onOpenPlan }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
+  usePageMeta({
+    title: 'MDR Free Split – UPI MDR Calculator, Split Planner & Guides',
+    description:
+      'Scan a merchant UPI QR, split a bill into installments and open each payment in your own UPI app. Free calculator, local-only plans and source-linked 2026 MDR guides.',
+    path: '/'
+  });
+
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {
@@ -108,39 +116,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
           <div className="text-center max-w-3xl mx-auto reveal stagger-1">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-line text-brand-dark text-xs font-bold tracking-wider uppercase mb-6 backdrop-blur-sm shadow-sm animate-fade-in stagger-1">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-gradient" />
-              <span>Zero MDR</span>
+              <span>UPI MDR calculator</span>
             </div>
 
             <h1 className="text-4xl min-[390px]:text-5xl sm:text-6xl lg:text-7xl font-extrabold text-ink tracking-tight leading-[1.05] mb-6 text-balance animate-fade-in stagger-2">
               Split your UPI payment into{' '}
               <span className="text-brand-gradient">
-                0% MDR installments.
+                planned installments.
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted leading-relaxed mb-10 max-w-2xl mx-auto animate-fade-in stagger-3 text-balance">
-              Scan any merchant UPI QR code, split the bill into installments under ₹2,000 each, and plan for <strong className="text-brand-dark font-bold">0% MDR</strong>. Open each installment in your own UPI app to pay the merchant directly.
+              Scan any merchant UPI QR code, split the bill into installments, and see where the standard ₹2,000 zero-MDR threshold applies. Open each installment in your own UPI app to pay the merchant directly.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 mb-12 max-w-md sm:max-w-none mx-auto animate-fade-in stagger-4">
-              <button
+              <a
                 id="hero-start-split-primary-btn"
-                onClick={onStartSplit}
-                className="btn-primary w-full sm:w-auto min-h-13 px-8 py-4 text-base"
+                href="/split"
+                className="btn-primary min-h-13 w-full px-8 py-4 text-base sm:w-auto"
               >
                 <span>Start a Split</span>
                 <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
+              </a>
+              <a
                 id="hero-how-it-works-secondary-btn"
-                onClick={() => {
-                  const el = document.getElementById('how-it-works-section');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="btn-secondary w-full sm:w-auto min-h-13 px-8 py-4 text-base"
+                href="#how-it-works-section"
+                className="btn-secondary min-h-13 w-full px-8 py-4 text-base sm:w-auto"
               >
                 How It Works
-              </button>
+              </a>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs sm:text-sm text-muted font-medium animate-fade-in stagger-5">
@@ -184,7 +189,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
                     <div className="mt-4 p-3 rounded-xl bg-brand-soft border border-brand/15">
                       <span className="text-xs font-bold text-brand-dark flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        0% MDR
+                        At or below the ₹2,000 threshold
                       </span>
                     </div>
                   </div>
@@ -230,13 +235,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
                   Plans clear automatically after {PLAN_RETENTION_DAYS} days.
                 </p>
               </div>
-              <button
-                onClick={onStartSplit}
+              <a
+                href="/split"
                 className="btn-secondary min-h-11 self-start px-4 text-xs sm:self-auto"
               >
                 <span>New split</span>
                 <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+              </a>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -248,9 +253,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
                 const installmentCount = plan.items?.length || plan.numberOfPayments;
 
                 return (
-                  <button
+                  <a
                     key={plan.id}
-                    onClick={() => onOpenPlan(plan.publicId || plan.id)}
+                    href={`/plan/${encodeURIComponent(plan.publicId || plan.id)}`}
                     className="group flex min-h-24 w-full items-start gap-3 rounded-2xl border border-line bg-lilac/60 p-4 text-left transition-all duration-200 hover:border-brand/25 hover:bg-white hover:shadow-md"
                     aria-label={`Open split plan for ${plan.merchantName || 'merchant'}`}
                   >
@@ -274,7 +279,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
                         <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                       </span>
                     </div>
-                  </button>
+                  </a>
                 );
               })}
             </div>
@@ -318,6 +323,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Guides Section */}
+      <section className="border-y border-line/60 bg-brand-soft/40 py-16 lg:py-24 reveal">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl reveal stagger-1">
+              <div className="kicker">From the guide library</div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                Understand the rules behind the split
+              </h2>
+              <p className="mt-2 text-base leading-relaxed text-muted">
+                Source-linked explanations of the 2026 MDR framework, merchant
+                QR safety and installment planning.
+              </p>
+            </div>
+            <a
+              href="/guides"
+              className="btn-secondary min-h-11 self-start px-4 text-xs sm:self-auto"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span>Browse all guides</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 reveal stagger-2">
+            {FEATURED_GUIDES.map((guide) => (
+              <GuideCard key={guide.slug} guide={guide} />
+            ))}
+          </div>
+
+          <p className="mt-6 text-xs leading-5 text-muted">
+            Written and maintained by Vamshi Polishetti. Read our{' '}
+            <a
+              href="/about"
+              className="font-semibold text-brand-dark underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+            >
+              editorial approach
+            </a>
+            .
+          </p>
         </div>
       </section>
 
@@ -386,15 +434,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPl
                 <span className="text-brand-gradient-light">UPI payment?</span>
               </h2>
               <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed text-balance">
-                Create your installment plan in seconds and plan for 0% MDR on payments up to ₹2,000. Nothing is charged on this site.
+                Create your installment plan in seconds and see the standard MDR arithmetic for each payment. Nothing is charged on this site.
               </p>
-              <button
-                onClick={onStartSplit}
+              <a
+                href="/split"
                 className="btn-primary px-8 py-3.5 text-base min-h-13"
               >
                 Start a Split Now
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </a>
               <p className="mt-5 text-[11px] font-medium text-white/35">
                 Independent calculator and planner · Your PIN is never stored
               </p>
