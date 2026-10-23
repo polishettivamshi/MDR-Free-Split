@@ -2,7 +2,8 @@ import { ParsedUPI } from '../types';
 
 export function parseUPIUri(rawText: string): ParsedUPI {
   const errors: string[] = [];
-  const text = rawText.trim();
+  const text = rawText.replace(/^\uFEFF/, '').trim();
+  const lowerText = text.toLowerCase();
 
   let pa = '';
   let pn = '';
@@ -12,9 +13,10 @@ export function parseUPIUri(rawText: string): ParsedUPI {
   let tn = '';
   let mc = '';
 
-  if (text.startsWith('upi://pay?') || text.startsWith('upi://pay/')) {
+  if (lowerText.startsWith('upi://pay?') || lowerText.startsWith('upi://pay/')) {
     try {
-      const url = new URL(text.replace('upi://pay/', 'upi://pay?'));
+      const normalizedText = text.replace(/^upi:\/\/pay\//i, 'upi://pay?');
+      const url = new URL(normalizedText);
       const params = url.searchParams;
       pa = params.get('pa') || '';
       pn = params.get('pn') || '';
@@ -56,12 +58,12 @@ export function parseUPIUri(rawText: string): ParsedUPI {
     errors.push('QR content does not contain a recognized UPI payment scheme');
   }
 
-  // Security checks
-  if (text.toLowerCase().includes('http://') || text.toLowerCase().includes('https://') || text.toLowerCase().includes('javascript:')) {
-    errors.push('Security rejection: QR code contains prohibited external web URLs.');
+  // Reject web links, but allow valid UPI links that carry a URL in an extra parameter.
+  if (lowerText.startsWith('http://') || lowerText.startsWith('https://') || lowerText.startsWith('javascript:')) {
+    errors.push('Security rejection: QR code contains a prohibited external web URL.');
   }
 
-  const vpaRegex = /^[a-zA-Z0-9.\-_]{2,49}@[a-zA-Z]{2,}$/;
+  const vpaRegex = /^[a-zA-Z0-9.\-_]{2,49}@[a-zA-Z0-9.\-_]{2,}$/;
   if (!pa || !vpaRegex.test(pa)) {
     errors.push('Invalid UPI VPA format (e.g. merchant@icici or brand@okhdfcbank)');
   }

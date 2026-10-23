@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Percent,
   ShieldCheck,
@@ -132,7 +133,7 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
         isExempt,
         totalTax: tax,
         savingsVsFull: Math.max(0, Math.round((singleTax - tax) * 100) / 100),
-        recommendationNote: isExempt ? '0% Tax Free' : 'Taxable'
+        recommendationNote: isExempt ? '0% MDR' : 'MDR applies'
       };
     });
 
@@ -161,12 +162,13 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
   const threshold = taxCalculation.exemptionThreshold;
 
   return (
-    <div className={`rounded-2xl border transition-all duration-300 ${
-      taxCalculation.isFullyExempt 
-        ? 'bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-emerald-500/10 border-emerald-300/80 shadow-xs' 
-        : 'bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-amber-500/10 border-amber-300/80 shadow-xs'
-    } ${className}`}>
-      <div className="p-4 sm:p-5 border-b border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <>
+      <div className={`rounded-2xl border transition-all duration-300 ${
+        taxCalculation.isFullyExempt 
+          ? 'bg-linear-to-br from-emerald-500/5 via-teal-500/5 to-emerald-500/10 border-emerald-300/80 shadow-xs'
+          : 'bg-linear-to-br from-amber-500/5 via-orange-500/5 to-amber-500/10 border-amber-300/80 shadow-xs'
+      } ${className}`}>
+      <div className="p-4 sm:p-5 border-b border-line/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
             taxCalculation.isFullyExempt 
@@ -181,14 +183,14 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                UPI Tax & Surcharge Advisor
+              <h3 className="text-sm font-black text-ink flex items-center gap-1.5">
+                MDR Split Guide
               </h3>
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider bg-slate-900 text-white">
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider bg-ink text-white">
                 NPCI 2026
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Live regulation check: Transactions ≤ {formatINR(threshold)} qualify for <strong className="text-emerald-700">0% MDR Exemption</strong>.
             </p>
           </div>
@@ -198,10 +200,10 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
           <button
             type="button"
             onClick={() => setShowDetailsModal(true)}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-white/80 hover:bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+            className="text-sm font-bold text-brand hover:text-brand-dark bg-white/80 hover:bg-white px-4 min-h-12 rounded-full border border-line shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Info className="w-3.5 h-3.5" />
-            <span>Tax Slabs</span>
+            <Info className="w-4 h-4" />
+            <span>MDR Rules</span>
           </button>
         </div>
       </div>
@@ -213,16 +215,16 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
             <div className="flex-1 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="font-black text-emerald-900 uppercase tracking-wider text-[11px]">
-                  Zero Surcharge Exemption Active
+                  All installments are below the MDR threshold
                 </span>
                 {taxCalculation.taxSaved > 0 && (
                   <span className="font-extrabold text-emerald-800 bg-white/90 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
-                    Saved {formatINR(taxCalculation.taxSaved)} in UPI taxes
+                    Est. MDR avoided {formatINR(taxCalculation.taxSaved)}
                   </span>
                 )}
               </div>
               <p className="text-emerald-800/90 mt-1 leading-relaxed">
-                By splitting this {formatINR(totalAmount)} payment into <strong>{numberOfPayments} installments</strong>, every split is at or below the <strong>{formatINR(threshold)}</strong> threshold. You pay <strong>₹0.00</strong> in MDR!
+                By splitting this {formatINR(totalAmount)} bill into <strong>{numberOfPayments} installments</strong>, every installment is at or below the <strong>{formatINR(threshold)}</strong> threshold. The estimated MDR on these installments is <strong>₹0.00</strong>. MDR, where applicable, is paid by the merchant.
               </p>
             </div>
           </div>
@@ -232,17 +234,17 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
             <div className="flex-1 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="font-black text-amber-900 uppercase tracking-wider text-[11px]">
-                  Installment Above UPI Tax Surcharge Slab
+                  One or more installments cross the ₹2,000 threshold
                 </span>
                 <span className="font-extrabold text-rose-700 bg-white/90 px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs">
-                  Est. Tax: {formatINR(taxCalculation.totalSplitTax)}
+                  Est. MDR: {formatINR(taxCalculation.totalSplitTax)}
                 </span>
               </div>
               <p className="text-amber-900/90 mt-1 leading-relaxed">
-                One or more split installments exceed the <strong>{formatINR(threshold)}</strong> regulatory slab and attract <strong>0.4% MDR (capped at ₹300 for ₹75,000+)</strong>. MDR is paid by the merchant, not the customer.
+                One or more installments exceed the <strong>{formatINR(threshold)}</strong> threshold and attract <strong>0.4% MDR (capped at ₹300 for ₹75,000+)</strong>. MDR is paid by the merchant, not the customer.
                 {taxCalculation.recommendedSplitCount > numberOfPayments && (
-                  <span className="block font-bold text-indigo-900 mt-1">
-                    💡 Tip: Split by {taxCalculation.recommendedSplitCount} payments to drop all installments below {formatINR(threshold)} and save {formatINR(taxCalculation.singlePaymentTax)} in MDR!
+                  <span className="block font-bold text-ink mt-1">
+                    Tip: choose {taxCalculation.recommendedSplitCount} installments to keep every installment at or below {formatINR(threshold)}.
                   </span>
                 )}
               </p>
@@ -252,16 +254,16 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <TrendingDown className="w-3.5 h-3.5 text-indigo-600" />
-              Compare Tax Impact by Split Count (Click to Apply):
+            <label className="text-[11px] font-black uppercase tracking-wider text-muted flex items-center gap-1.5">
+              <TrendingDown className="w-3.5 h-3.5 text-brand" />
+              Compare MDR by installment count (tap to apply):
             </label>
-            <span className="text-[10px] text-slate-500 font-medium">
+            <span className="text-[10px] text-muted font-medium">
               Threshold: ≤ {formatINR(threshold)}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
             {taxCalculation.splitOptions.map((opt) => {
               const isCurrent = numberOfPayments === opt.splitCount;
               const isRecommended = opt.splitCount === taxCalculation.recommendedSplitCount && opt.isExempt;
@@ -271,53 +273,53 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                   key={opt.splitCount}
                   type="button"
                   onClick={() => onSelectSplitCount(opt.splitCount)}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative ${
+                  className={`min-h-28 p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative ${
                     isCurrent
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-400/40 scale-[1.02]'
+                      ? 'bg-ink text-white border-ink shadow-md ring-2 ring-brand/25 scale-[1.02]'
                       : opt.isExempt
-                        ? 'bg-white hover:bg-emerald-50/50 border-emerald-300 text-slate-800 hover:border-emerald-400'
-                        : 'bg-white hover:bg-amber-50/50 border-slate-200 text-slate-800 hover:border-slate-300'
+                        ? 'bg-white hover:bg-emerald-50/50 border-emerald-300 text-ink-soft hover:border-emerald-400'
+                        : 'bg-white hover:bg-amber-50/50 border-line text-ink-soft hover:border-amber-300'
                   }`}
                 >
                   {isRecommended && !isCurrent && (
                     <span className="absolute -top-2 left-2 text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.2 rounded-full shadow-2xs">
-                      Best Tax Saver
+                      Best MDR option
                     </span>
                   )}
 
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-black ${isCurrent ? 'text-white' : 'text-slate-900'}`}>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <span className={`text-sm font-black ${isCurrent ? 'text-white' : 'text-ink'}`}>
                       {opt.splitCount} Splits
                     </span>
                     {opt.isExempt ? (
-                      <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                      <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
                         isCurrent ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-300/30' : 'bg-emerald-100 text-emerald-800'
                       }`}>
-                        0% Tax
+                        0% MDR
                       </span>
                     ) : (
-                      <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                      <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
                         isCurrent ? 'bg-rose-400/20 text-rose-200 border border-rose-300/30' : 'bg-rose-100 text-rose-700'
                       }`}>
-                        Taxable
+                        MDR applies
                       </span>
                     )}
                   </div>
 
-                  <div className={`text-xs font-extrabold ${isCurrent ? 'text-indigo-100' : 'text-slate-700'}`}>
+                  <div className={`text-sm font-extrabold ${isCurrent ? 'text-white/75' : 'text-muted'}`}>
                     {formatINR(opt.perInstallmentAmount)}
-                    <span className={`text-[10px] font-normal ${isCurrent ? 'text-indigo-200' : 'text-slate-400'}`}> /split</span>
+                    <span className={`text-[11px] font-normal ${isCurrent ? 'text-white/50' : 'text-muted-soft'}`}> /split</span>
                   </div>
 
-                  <div className={`text-[10px] mt-1 font-semibold ${
+                  <div className={`text-[11px] mt-1.5 font-semibold ${
                     isCurrent 
                       ? opt.isExempt ? 'text-emerald-200 font-bold' : 'text-amber-200'
-                      : opt.isExempt ? 'text-emerald-700' : 'text-slate-500'
+                      : opt.isExempt ? 'text-emerald-700' : 'text-muted'
                   }`}>
                     {opt.isExempt ? (
-                      opt.savingsVsFull > 0 ? `Saves ${formatINR(opt.savingsVsFull)}` : 'Exempt from tax'
+                      opt.savingsVsFull > 0 ? `Est. MDR avoided ${formatINR(opt.savingsVsFull)}` : '0% MDR'
                     ) : (
-                      `Est. tax: ${formatINR(opt.totalTax)}`
+                      `Est. MDR: ${formatINR(opt.totalTax)}`
                     )}
                   </div>
                 </button>
@@ -326,10 +328,10 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
           </div>
         </div>
 
-        <div className="pt-2 border-t border-slate-200/60">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="pt-2 border-t border-line/60">
+          <div className="flex items-center justify-between text-xs text-muted mb-2">
             <span className="font-semibold">Current Breakdown ({numberOfPayments} Installments):</span>
-            <span>Single Full Payment Tax: <strong className="text-slate-700">{formatINR(taxCalculation.singlePaymentTax)}</strong></span>
+            <span>MDR if paid in one go: <strong className="text-muted">{formatINR(taxCalculation.singlePaymentTax)}</strong></span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -343,21 +345,21 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
                 }`}
               >
                 <div>
-                  <span className="font-bold text-slate-600 block text-[10px] uppercase">
+                  <span className="font-bold text-muted block text-[10px] uppercase">
                     Split #{item.sequenceNumber}
                   </span>
-                  <span className="font-extrabold text-slate-900">
+                  <span className="font-extrabold text-ink">
                     {formatINR(item.amount)}
                   </span>
                 </div>
                 <div className="text-right">
                   {item.exceedsThreshold ? (
                     <span className="text-[10px] font-bold text-amber-700 block">
-                      Tax: {formatINR(item.taxAmount)}
+                      MDR: {formatINR(item.taxAmount)}
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
-                      <CheckCircle2 className="w-3 h-3" /> 0% Tax
+                      <CheckCircle2 className="w-3 h-3" /> 0% MDR
                     </span>
                   )}
                 </div>
@@ -366,64 +368,74 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
           </div>
         </div>
       </div>
+    </div>
 
-      {showDetailsModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+    {showDetailsModal && createPortal(
+      <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Official UPI MDR rules"
+            className="bg-white rounded-3xl max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-5 sm:p-6 shadow-2xl border border-line animate-in fade-in zoom-in-95"
+          >
+            <div className="flex items-center justify-between gap-3 pb-4 border-b border-line">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand flex items-center justify-center shrink-0">
                   <Percent className="w-4 h-4" />
                 </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-900">Official UPI MDR Rules</h4>
-                  <p className="text-[11px] text-slate-500">PIB Delhi - Payment & Settlement Systems Act, 2007</p>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-black text-ink">Official UPI MDR Rules</h4>
+                  <p className="text-[11px] text-muted">PIB Delhi - Payment & Settlement Systems Act, 2007</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowDetailsModal(false)}
-                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+                className="min-w-11 min-h-11 shrink-0 rounded-full text-muted-soft hover:text-ink-soft hover:bg-lilac flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+                aria-label="Close MDR rules"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mt-4 space-y-3.5 text-xs text-slate-600">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                  <span className="font-bold text-slate-700">UPI Exemption Threshold:</span>
+            <div className="mt-4 space-y-3.5 text-xs text-muted">
+              <div className="p-3 rounded-xl bg-lilac border border-line space-y-2">
+                <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
+                  <span className="font-bold text-muted">UPI Exemption Threshold:</span>
                   <span className="font-mono font-black text-emerald-700">₹2,000.00</span>
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                  <span className="font-bold text-slate-700">Transactions ≤ ₹2,000:</span>
+                <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
+                  <span className="font-bold text-muted">Transactions ≤ ₹2,000:</span>
                   <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">0% Free (Zero MDR)</span>
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                  <span className="font-bold text-slate-700">MDR (&gt; ₹2,000):</span>
-                  <span className="font-bold text-slate-900">0.40%</span>
+                <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
+                  <span className="font-bold text-muted">MDR (&gt; ₹2,000):</span>
+                  <span className="font-bold text-ink">0.40%</span>
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-                  <span className="font-bold text-slate-700">MDR Cap (₹75,000+):</span>
-                  <span className="font-bold text-slate-900">₹300 max</span>
+                <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 pb-2 border-b border-line">
+                  <span className="font-bold text-muted">MDR Cap (₹75,000+):</span>
+                  <span className="font-bold text-ink">₹300 max</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-700">Who Pays MDR:</span>
-                  <span className="font-bold text-slate-900">Merchant (not customer)</span>
+                <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5">
+                  <span className="font-bold text-muted">Who Pays MDR:</span>
+                  <span className="font-bold text-ink">Merchant (not customer)</span>
                 </div>
               </div>
 
               <div>
-                <h5 className="font-bold text-slate-900 mb-1">Why MDR Free Split saves you money:</h5>
-                <p className="text-slate-500 leading-relaxed">
-                  When a large purchase (e.g. ₹6,000) is paid in one lump sum, it crosses the ₹2,000 MDR slab and incurs 0.4% merchant discount rate. By splitting into 3 payments of ₹2,000 each, every individual transaction stays under the ₹2,000 exemption threshold, keeping MDR at zero.
+                <h5 className="font-bold text-ink mb-1">How the ₹2,000 threshold works:</h5>
+                <p className="text-muted leading-relaxed">
+                  When a large bill (for example ₹6,000) is paid in one go, it crosses the ₹2,000
+                  MDR threshold and can attract 0.4% MDR. Splitting it into 3 installments of
+                  ₹2,000 each keeps every installment at the 0% MDR threshold. MDR, where
+                  applicable, is paid by the merchant.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-indigo-50/80 border border-indigo-200 text-indigo-950">
-                <span className="font-bold block mb-0.5">Automated Optimization</span>
-                <span>MDR Free Split continuously recalculates the optimal number of 
-                  installments (2, 3, 4, etc.) to keep your transactions inside the 0% MDR bracket.</span>
+              <div className="p-3 rounded-xl bg-brand-soft/80 border border-brand-200 text-ink">
+                <span className="font-bold block mb-0.5">Suggested split count</span>
+                <span>The guide suggests a practical installment count (2, 3, 4, and so on)
+                  that keeps each installment at or below ₹2,000. You can always adjust it.</span>
               </div>
             </div>
 
@@ -431,14 +443,15 @@ export const UPITaxAdvisor: React.FC<UPITaxAdvisorProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                className="min-h-11 px-5 py-2 bg-ink hover:bg-ink-soft text-white font-bold text-xs rounded-full cursor-pointer transition-colors"
               >
                 Got It
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        </div>,
+      document.body
+    )}
+    </>
   );
 };

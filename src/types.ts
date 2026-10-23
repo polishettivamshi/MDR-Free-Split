@@ -1,20 +1,13 @@
-export type PlanStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
-export type ItemStatus = 'NOT_STARTED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'LOCKED';
-export type PaymentStatus = 'CREATED' | 'INITIATED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
-
 export interface SplitPlan {
   id: string;
   publicId: string;
-  userId: string;
   merchantName: string;
   merchantVpa: string;
   totalAmount: number;
   currency: string;
   numberOfPayments: number;
-  status: PlanStatus;
   createdAt: string;
   updatedAt: string;
-  expiresAt: string;
   items?: SplitItem[];
 }
 
@@ -23,40 +16,8 @@ export interface SplitItem {
   splitPlanId: string;
   sequenceNumber: number;
   amount: number;
-  status: ItemStatus;
-  paymentId?: string;
-  payment?: Payment;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Payment {
-  id: string;
-  publicId: string;
-  splitItemId: string;
-  provider: string;
-  providerPaymentId?: string;
-  transactionReference: string;
-  amount: number;
-  currency: string;
-  status: PaymentStatus;
-  upiApp?: string;
-  initiatedAt?: string;
-  completedAt?: string;
-  failureReason?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UPIApp {
-  id: string;
-  name: string;
-  packageName?: string;
-  icon: string;
-  deepLinkScheme?: string;
-  enabled: boolean;
-  color: string;
-  description: string;
 }
 
 export interface ParsedUPI {

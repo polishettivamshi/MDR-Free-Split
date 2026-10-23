@@ -58,19 +58,21 @@ export const GoogleAdSlot: React.FC<GoogleAdSlotProps> = ({
 
   const renderBanner = () => (
     <div
-      className={`text-center p-6 sm:p-8 bg-slate-50/50 border border-slate-200 rounded-2xl ${className}`}
+      className={`text-center p-6 sm:p-8 bg-lilac/50 border border-line rounded-2xl ${className}`}
     >
-      {isEnabled ? adSlot : <p className="text-xs text-slate-400">Advertisement</p>}
+      {isEnabled ? adSlot : <p className="text-xs text-muted-soft">Advertisement</p>}
     </div>
   );
 
   const renderCompact = () => (
     <div
-      className={`text-center p-3 sm:p-4 bg-slate-50/50 border border-slate-200 rounded-xl ${className}`}
+      className={`text-center p-3 sm:p-4 bg-lilac/50 border border-line rounded-xl ${className}`}
     >
-      {isEnabled ? adSlot : <p className="text-xs text-slate-400">Advertisement</p>}
+      {isEnabled ? adSlot : <p className="text-xs text-muted-soft">Advertisement</p>}
     </div>
   );
+
+  if (!isEnabled) return null;
 
   return placement === 'banner' ? renderBanner() : renderCompact();
 };

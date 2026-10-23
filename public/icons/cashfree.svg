@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="16" fill="#0F1B2B"/>
-  <g transform="translate(13, 11)">
-    <path d="M5 7C5 4.8 6.8 3 9 3H27C29.2 3 31 4.8 31 7V10C31 11.1 30.1 12 29 12H15C13.9 12 13 12.9 13 14V19C13 20.1 13.9 21 15 21H25C26.1 21 27 21.9 27 23V26C27 27.1 26.1 28 25 28H15C13.9 28 13 28.9 13 30V35H5V7Z" fill="#703EE5"/>
-    <path d="M13 14H29C30.1 14 31 14.9 31 16V19C31 20.1 30.1 21 29 21H21V30H13V14Z" fill="#00B386"/>
-  </g>
-  <text x="32" y="55" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="7" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">CASHFREE</text>
-</svg>

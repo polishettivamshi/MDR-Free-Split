@@ -1,11 +1,7 @@
 {
   "name": "MDR Free Split",
-  "description": "Split your merchant UPI payment into installments under ₹2,000 each to pay 0% MDR tax. Create a payment plan and authorize each payment securely through your preferred UPI app.",
+  "description": "Scan a merchant UPI QR, split the bill into installments under ₹2,000, and open each installment in a UPI app. A calculator and planner only.",
   "requestFramePermissions": [
     "camera"
-  ],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }
-

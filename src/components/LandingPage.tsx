@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2, Clock3, Store } from 'lucide-react';
+import { SplitPlan } from '../types';
+import { PLAN_RETENTION_DAYS } from '../lib/localStore';
+import { formatINR } from '../lib/upi';
+import { DisclaimerNotice } from './DisclaimerNotice';
 
 interface LandingPageProps {
   onStartSplit: () => void;
+  recentPlans: SplitPlan[];
+  onOpenPlan: (planId: string) => void;
 }
 
 const steps = [
@@ -11,35 +17,35 @@ const steps = [
     title: 'Scan Merchant QR',
     desc: 'Point your camera or upload a merchant UPI QR code to pre-fill details.',
     icon: QrCode,
-    iconColor: 'text-indigo-600'
+    iconWrap: 'bg-linear-to-br from-[#635bff] to-[#8b5cf6] text-white shadow-brand/25'
   },
   {
     num: '2',
     title: 'Choose Split Amount',
-    desc: 'Divide bill into installments under ₹2,000 each for 0% MDR tax.',
+    desc: 'Divide the bill into installments under ₹2,000 each for 0% MDR.',
     icon: Layers,
-    iconColor: 'text-emerald-600'
+    iconWrap: 'bg-linear-to-br from-[#8b5cf6] to-[#d946ef] text-white shadow-[#8b5cf6]/25'
   },
   {
     num: '3',
-    title: 'Authorize in UPI App',
-    desc: 'Pay each installment securely in PhonePe, Google Pay, Paytm, or BHIM.',
+    title: 'Open in UPI App',
+    desc: 'Open each installment in PhonePe, Google Pay, Paytm, BHIM, or another UPI app and pay the merchant directly.',
     icon: Smartphone,
-    iconColor: 'text-violet-600'
+    iconWrap: 'bg-linear-to-br from-[#22d3ee] to-[#635bff] text-white shadow-accent/25'
   }
 ];
 
 const stats = [
-  { value: '0%', label: 'MDR tax on payments up to ₹2,000' },
+  { value: '0%', label: 'MDR on payments up to ₹2,000' },
   { value: '0', label: 'PINs or card details stored' },
-  { value: '3', label: 'Steps to split a payment' },
+  { value: '3', label: 'Steps to split a bill' },
   { value: '24/7', label: 'Local-only access' }
 ];
 
 const faqs = [
   {
     q: 'What is MDR Free Split?',
-    a: 'MDR Free Split lets you divide any merchant UPI payment into installments under ₹2,000 each, so every transaction qualifies for 0% Merchant Discount Rate tax under NPCI rules.'
+    a: 'MDR Free Split divides a merchant UPI bill into installments under ₹2,000 each, so every installment can stay within the 0% MDR threshold. It is a calculator and planner, not a payment service.'
   },
   {
     q: 'Does it store my UPI PIN?',
@@ -47,15 +53,19 @@ const faqs = [
   },
   {
     q: 'Which UPI apps work?',
-    a: 'All NPCI-compliant UPI apps including PhonePe, Google Pay, Paytm, BHIM, CRED, Amazon Pay, Navi, and official bank UPI apps from HDFC, ICICI, SBI, Axis, and others.'
+    a: 'Any NPCI-compliant UPI app can be used, including PhonePe, Google Pay, Paytm, BHIM, CRED, Amazon Pay, Navi, and bank UPI apps from HDFC, ICICI, SBI, Axis, and others.'
   },
   {
     q: 'Is it free to use?',
-    a: 'Yes. MDR Free Split is completely free. There are no platform fees, no hidden charges, and no backend subscriptions. Everything runs locally in your browser.'
+    a: 'Yes. MDR Free Split is completely free. There are no platform fees, no hidden charges, and no subscriptions. Everything runs locally in your browser.'
+  },
+  {
+    q: 'Does MDR Free Split take payments or issue refunds?',
+    a: 'No. It only calculates a split and opens a UPI payment link. You pay the merchant directly in your own UPI app. This site does not collect funds, confirm payments, or issue refunds; any refund request must be handled by the merchant.'
   }
 ];
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit, recentPlans, onOpenPlan }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {
@@ -96,27 +106,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
       <section className="relative pt-16 pb-32 lg:pt-24 lg:pb-40 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto reveal stagger-1">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-100 text-indigo-700 text-xs font-bold tracking-wider uppercase mb-6 backdrop-blur-sm shadow-sm animate-fade-in stagger-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Zero MDR Tax</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-line text-brand-dark text-xs font-bold tracking-wider uppercase mb-6 backdrop-blur-sm shadow-sm animate-fade-in stagger-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-gradient" />
+              <span>Zero MDR</span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.05] mb-6 text-balance animate-fade-in stagger-2">
+            <h1 className="text-4xl min-[390px]:text-5xl sm:text-6xl lg:text-7xl font-extrabold text-ink tracking-tight leading-[1.05] mb-6 text-balance animate-fade-in stagger-2">
               Split your UPI payment into{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-emerald-500 to-cyan-400 underline decoration-indigo-200/50 decoration-wavy underline-offset-8">
-                tax-free installments.
+              <span className="text-brand-gradient">
+                0% MDR installments.
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-600 leading-relaxed mb-10 max-w-2xl mx-auto animate-fade-in stagger-3 text-balance">
-              Scan any merchant UPI QR code, split the amount into installments under ₹2,000 each, and pay <strong className="text-emerald-600 font-bold">0% MDR tax</strong>. Authorize each payment securely in your UPI app.
+            <p className="text-lg sm:text-xl text-muted leading-relaxed mb-10 max-w-2xl mx-auto animate-fade-in stagger-3 text-balance">
+              Scan any merchant UPI QR code, split the bill into installments under ₹2,000 each, and plan for <strong className="text-brand-dark font-bold">0% MDR</strong>. Open each installment in your own UPI app to pay the merchant directly.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 mb-12 max-w-md sm:max-w-none mx-auto animate-fade-in stagger-4">
               <button
                 id="hero-start-split-primary-btn"
                 onClick={onStartSplit}
-                className="btn-primary w-full sm:w-auto min-h-[52px] px-8 py-4 text-base"
+                className="btn-primary w-full sm:w-auto min-h-13 px-8 py-4 text-base"
               >
                 <span>Start a Split</span>
                 <ArrowRight className="w-5 h-5" />
@@ -127,52 +137,54 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
                   const el = document.getElementById('how-it-works-section');
                   el?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="btn-secondary w-full sm:w-auto min-h-[52px] px-8 py-4 text-base"
+                className="btn-secondary w-full sm:w-auto min-h-13 px-8 py-4 text-base"
               >
                 How It Works
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-3 text-xs sm:text-sm text-slate-500 font-medium animate-fade-in stagger-5">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs sm:text-sm text-muted font-medium animate-fade-in stagger-5">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Zero PIN or card data stored</span>
               </div>
-              <span className="w-px h-3 bg-slate-300" />
+              <span className="hidden sm:block w-px h-3 bg-line" />
               <span>Local storage only</span>
-              <span className="w-px h-3 bg-slate-300" />
-              <span>No backend, no tracking</span>
+              <span className="hidden sm:block w-px h-3 bg-line" />
+              <span>No account needed</span>
             </div>
+
+            <DisclaimerNotice compact className="mt-8 max-w-2xl mx-auto text-left" />
           </div>
 
           {/* Hero visual - phone mockup placeholder */}
           <div className="mt-20 sm:mt-24 relative z-0 reveal stagger-3">
             <div className="flex justify-center">
               <div className="relative max-w-md">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-emerald-500/20 rounded-3xl blur-3xl" />
-                <div className="relative bg-white/80 backdrop-blur-md border border-white/50 rounded-3xl p-6 shadow-2xl shadow-indigo-100/50">
+                <div className="absolute -inset-6 bg-linear-to-br from-brand/25 via-[#8b5cf6]/20 to-accent/20 rounded-[2.5rem] blur-3xl" />
+                <div className="relative bg-white/85 backdrop-blur-xl border border-line rounded-4xl p-6 shadow-[0_30px_80px_-40px_rgba(17,20,57,0.4)]">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-rose-400" />
-                    <div className="w-2 h-2 rounded-full bg-amber-400" />
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <div className="w-2 h-2 rounded-full bg-brand" />
+                    <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
+                    <div className="w-2 h-2 rounded-full bg-accent" />
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Merchant QR</span>
-                      <span className="text-xs font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">store@upi</span>
+                      <span className="text-xs text-muted">Merchant QR</span>
+                      <span className="text-xs font-mono font-bold text-ink bg-lilac border border-line px-2 py-1 rounded-lg">store@upi</span>
                     </div>
-                    <div className="flex items-center justify-between py-3 border-t border-slate-100">
-                      <span className="text-sm font-bold text-slate-900">Amount</span>
-                      <span className="text-sm font-bold text-indigo-600">₹6,000</span>
+                    <div className="flex items-center justify-between py-3 border-t border-line-soft">
+                      <span className="text-sm font-bold text-ink">Amount</span>
+                      <span className="text-sm font-bold text-brand">₹6,000</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-900">Split into</span>
-                      <span className="text-sm font-bold text-emerald-600">3 × ₹2,000</span>
+                      <span className="text-sm font-bold text-ink">Split into</span>
+                      <span className="text-sm font-bold text-brand-dark">3 × ₹2,000</span>
                     </div>
-                    <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                    <div className="mt-4 p-3 rounded-xl bg-brand-soft border border-brand/15">
+                      <span className="text-xs font-bold text-brand-dark flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        0% MDR Tax
+                        0% MDR
                       </span>
                     </div>
                   </div>
@@ -184,15 +196,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
       </section>
 
       {/* Trust / Stats Section */}
-      <section className="py-12 border-y border-slate-200/50 bg-white">
+      <section className="py-12 border-y border-line/50 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 reveal">
             {stats.map((stat) => (
-              <div key={stat.label} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:bg-indigo-50 hover:border-indigo-100 transition-all duration-300">
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 mb-1">
+              <div key={stat.label} className="group p-5 rounded-2xl bg-lilac border border-line-soft text-center hover:bg-white hover:border-brand/20 hover:shadow-lg hover:shadow-brand/5 transition-all duration-300">
+                <div className="text-2xl sm:text-3xl font-black text-brand-gradient mb-1">
                   {stat.value}
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium uppercase tracking-wider">
+                <p className="text-xs sm:text-sm text-muted font-medium uppercase tracking-wider">
                   {stat.label}
                 </p>
               </div>
@@ -201,13 +213,82 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
         </div>
       </section>
 
+      {/* Recent Plans Section */}
+      {recentPlans.length > 0 && (
+        <section className="border-b border-line/50 bg-white py-8 sm:py-10 reveal">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand">
+                  <Clock3 className="h-3 w-3" />
+                  Saved in this browser for {PLAN_RETENTION_DAYS} days
+                </div>
+                <h2 className="text-xl font-extrabold tracking-tight text-ink sm:text-2xl">
+                  Continue a split plan
+                </h2>
+                <p className="mt-1 text-xs text-muted">
+                  Plans clear automatically after {PLAN_RETENTION_DAYS} days.
+                </p>
+              </div>
+              <button
+                onClick={onStartSplit}
+                className="btn-secondary min-h-11 self-start px-4 text-xs sm:self-auto"
+              >
+                <span>New split</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {recentPlans.map((plan) => {
+                const created = new Date(plan.createdAt);
+                const dateLabel = Number.isNaN(created.getTime())
+                  ? 'Saved plan'
+                  : created.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const installmentCount = plan.items?.length || plan.numberOfPayments;
+
+                return (
+                  <button
+                    key={plan.id}
+                    onClick={() => onOpenPlan(plan.publicId || plan.id)}
+                    className="group flex min-h-24 w-full items-start gap-3 rounded-2xl border border-line bg-lilac/60 p-4 text-left transition-all duration-200 hover:border-brand/25 hover:bg-white hover:shadow-md"
+                    aria-label={`Open split plan for ${plan.merchantName || 'merchant'}`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-sm">
+                      <Store className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-bold text-ink group-hover:text-brand">
+                            {plan.merchantName || 'Merchant'}
+                          </h3>
+                          <p className="mt-0.5 text-[10px] font-medium text-muted">
+                            {dateLabel} · {installmentCount} {installmentCount === 1 ? 'installment' : 'installments'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-black text-ink">{formatINR(plan.totalAmount)}</span>
+                      </div>
+                      <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-brand">
+                        Open plan
+                        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* How It Works Section */}
-      <section id="how-it-works-section" className="py-20 lg:py-32 bg-slate-50 reveal">
+      <section id="how-it-works-section" className="scroll-mt-16 py-20 lg:py-32 bg-lilac reveal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head reveal stagger-1">
             <div className="kicker">Simple 3-Step Flow</div>
             <h2 className="">Split Your Payment in Minutes</h2>
-            <p>From scanning the QR to authorizing in your UPI app, complete the entire split in three steps.</p>
+            <p>From scanning the QR to opening each installment in your UPI app, complete the split in three steps.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 reveal stagger-2">
@@ -216,20 +297,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
               return (
                 <div
                   key={step.num}
-                  className="group relative p-8 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300 overflow-hidden"
+                  className="group relative p-8 rounded-3xl bg-white border border-line shadow-sm hover:border-brand-200 hover:shadow-xl hover:shadow-brand-soft/50 transition-all duration-300 overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-linear-to-t from-brand-soft/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative z-10 flex items-center justify-between mb-6">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-md transition-all duration-300 group-hover:scale-110 ${step.iconColor.replace('text-', 'bg-') + '/10' + ' ' + step.iconColor}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 ${step.iconWrap}`}>
                       <Icon className="w-7 h-7" />
                     </div>
-                    <span className="text-3xl font-black text-slate-100">0{step.num}</span>
+                    <span className="text-3xl font-black text-ink/5">0{step.num}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors duration-200">
+                  <h3 className="text-lg font-bold text-ink mb-3 group-hover:text-brand transition-colors duration-200">
                     {step.title}
                   </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed mb-6">{step.desc}</p>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p className="text-sm text-muted leading-relaxed mb-6">{step.desc}</p>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <span>Next step</span>
                     <ChevronRight className="w-3 h-3" />
                   </div>
@@ -241,7 +322,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 lg:py-32 bg-white border-t border-slate-200/50 reveal">
+      <section className="py-20 lg:py-32 bg-white border-t border-line/50 reveal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head reveal stagger-1">
             <div className="kicker">Frequently Asked Questions</div>
@@ -255,23 +336,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
               return (
                 <div
                   key={index}
-                  className="group relative bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all duration-300 hover:border-indigo-200 hover:shadow-md"
+                  className={`group relative bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${
+                    isOpen
+                      ? 'border-brand/25 shadow-lg shadow-brand/5'
+                      : 'border-line hover:border-brand/20 hover:shadow-md'
+                  }`}
                 >
                   <button
                     onClick={() => toggleFaq(index)}
-                    className="w-full flex items-center justify-between px-6 py-4 text-left text-base font-bold text-slate-900 transition-all duration-200"
+                    className="w-full min-h-12 flex items-center justify-between gap-4 px-5 sm:px-6 py-4 text-left text-sm sm:text-base font-bold text-ink transition-all duration-200"
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                    <span className="flex items-center gap-3">
+                      <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                        isOpen ? 'bg-ink text-white' : 'bg-brand-soft text-brand'
+                      }`}>
                         {index + 1}
                       </span>
                       {faq.q}
                     </span>
-                    <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+                    <ChevronRight className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90 text-brand' : 'text-muted-soft'}`} />
                   </button>
                   {isOpen && (
-                    <div className="px-6 pb-6 pt-2 border-t border-slate-100/50">
-                      <p className="text-sm text-slate-600 leading-relaxed">{faq.a}</p>
+                    <div className="px-5 sm:px-6 pb-6 pt-1 border-t border-line-soft">
+                      <p className="text-sm text-muted leading-relaxed">{faq.a}</p>
                     </div>
                   )}
                 </div>
@@ -282,23 +369,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartSplit }) => {
       </section>
 
       {/* Bottom CTA */}
-      <section className="py-20 lg:py-28 reveal stagger-1 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-emerald-600/80 rounded-3xl blur-[100px] -z-10 opacity-80" />
+      <section className="relative py-20 lg:py-28 reveal stagger-1 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4 tracking-tight">
-              Ready to split your first UPI payment?
-            </h2>
-            <p className="text-indigo-100 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed">
-              Create your installment plan in seconds and pay zero MDR tax through your favorite UPI app.
-            </p>
-            <button
-              onClick={onStartSplit}
-              className="btn-primary inline-flex items-center justify-center gap-2 px-8 py-3.5 text-base min-h-[52px]"
-            >
-              Start a Split Now
-              <ChevronRight className="w-4 h-4" />
-            </button>
+          <div className="relative overflow-hidden rounded-4xl sm:rounded-[2.5rem] bg-ink border border-white/10 px-6 py-14 sm:px-12 sm:py-20 text-center shadow-[0_40px_100px_-50px_rgba(17,20,57,0.65)]">
+            <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 -bottom-24 h-80 w-80 rounded-full bg-accent/15 blur-3xl" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/30 to-transparent" />
+
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/70 mb-5">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                Plan first. Pay in your UPI app.
+              </span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight text-balance">
+                Ready to split your first{' '}
+                <span className="text-brand-gradient-light">UPI payment?</span>
+              </h2>
+              <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto mb-8 leading-relaxed text-balance">
+                Create your installment plan in seconds and plan for 0% MDR on payments up to ₹2,000. Nothing is charged on this site.
+              </p>
+              <button
+                onClick={onStartSplit}
+                className="btn-primary px-8 py-3.5 text-base min-h-13"
+              >
+                Start a Split Now
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <p className="mt-5 text-[11px] font-medium text-white/35">
+                Independent calculator and planner · Your PIN is never stored
+              </p>
+            </div>
           </div>
         </div>
       </section>

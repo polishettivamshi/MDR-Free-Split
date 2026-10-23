@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import jsQR from 'jsqr';
 import {
   Camera,
   Upload,
@@ -12,15 +11,17 @@ import {
   Edit3,
   X,
   QrCode,
-  Percent
+  Percent,
+  Loader2
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { parseUPIUri, formatINR } from '../lib/upi';
 import { ParsedUPI, SplitPlan } from '../types';
-import { PaymentGatewayIcon } from './PaymentGatewayIcon';
 import { CameraQRScanner } from './CameraQRScanner';
 import { UPITaxAdvisor } from './UPITaxAdvisor';
 import { localStore } from '../lib/localStore';
+import { decodeQrFromImage } from '../lib/qrImage';
+import { DisclaimerNotice } from './DisclaimerNotice';
 
 interface CreateSplitProps {
   onPlanCreated: (plan: SplitPlan) => void;
@@ -43,7 +44,10 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [amountInputStr, setAmountInputStr] = useState<string>('');
   const [qrMethod, setQrMethod] = useState<'scan' | 'upload' | 'manual'>('scan');
-   
+  const [isReadingQr, setIsReadingQr] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+
   // Scan notification state
   const [scanSuccessNotification, setScanSuccessNotification] = useState<{
     merchant: string;
@@ -93,45 +97,65 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
   }, [totalAmount, numberOfPayments, splitMode]);
 
   // Image Upload Parser
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const file = input.files?.[0];
-    if (!file) return;
+  const handleQrImageFile = async (file: File) => {
+    setApiError(null);
+    setUploadError(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setApiError('Could not read this image. Please try another image or enter the UPI ID manually.');
-          return;
-        }
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth'
-        });
-        if (code && code.data) {
-          handleScannedData(code.data);
-        } else {
-          setApiError('No readable UPI QR code was detected in this image. Please try another image or enter UPI ID manually.');
-        }
-      };
-      img.onerror = () => {
-        setApiError('This image could not be opened. Please choose a PNG, JPG, or WEBP file.');
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => {
-      setApiError('The selected file could not be read. Please try another image.');
-    };
-    reader.readAsDataURL(file);
+    const looksLikeImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+    if (!looksLikeImage) {
+      setUploadError('Please choose a PNG, JPG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError('This image is larger than 15 MB. Please choose a smaller screenshot.');
+      return;
+    }
+
+    setIsReadingQr(true);
+    try {
+      const rawText = await decodeQrFromImage(file);
+      if (!rawText) {
+        setUploadError('No QR code was found in this image. Make sure the full code is visible and try a clearer screenshot.');
+        return;
+      }
+
+      const parsed = parseUPIUri(rawText);
+      if (!parsed.isValid) {
+        const invalidVpa = parsed.validationErrors.some((error) => error.includes('Invalid UPI VPA'));
+        const notUpiQr = parsed.validationErrors.some(
+          (error) => error.includes('recognized UPI') || error.includes('prohibited external') || error.includes('Malformed UPI')
+        );
+        setUploadError(
+          invalidVpa && !notUpiQr
+            ? 'The QR code was read, but its UPI ID is not valid. Please try the original merchant QR.'
+            : 'This QR code is not a UPI payment code. Please upload the merchant’s payment QR.'
+        );
+        return;
+      }
+
+      handleScannedData(rawText, parsed);
+    } catch {
+      setUploadError('This image could not be opened. Please choose a PNG, JPG, or WEBP file.');
+    } finally {
+      setIsReadingQr(false);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     // Allow selecting the same file again after an error.
-    input.value = '';
+    e.target.value = '';
+    if (file) void handleQrImageFile(file);
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setIsDraggingImage(false);
+    if (isReadingQr) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) void handleQrImageFile(file);
   };
 
   const handleScannedData = (rawText: string, preParsed?: ParsedUPI) => {
@@ -139,12 +163,13 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
     setParsedUPI(parsed);
     if (parsed.isValid) {
       setApiError(null);
+      setUploadError(null);
       if (parsed.am && parsed.am > 0) {
         setTotalAmount(parsed.am);
         setAmountInputStr(parsed.am.toString());
       }
       setScanSuccessNotification({
-        merchant: parsed.pn || 'Verified Merchant',
+        merchant: parsed.pn || 'Scanned merchant',
         vpa: parsed.pa,
         amount: parsed.am,
         note: parsed.tn
@@ -184,7 +209,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
       return;
     }
     if (!parsedUPI.pa || !parsedUPI.isValid) {
-      setApiError('Please provide and confirm a valid merchant UPI ID.');
+      setApiError('Please provide a valid merchant UPI ID.');
       return;
     }
 
@@ -203,7 +228,6 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           splitPlanId: 'temp',
           sequenceNumber: idx + 1,
           amount: amt,
-          status: idx === 0 ? 'NOT_STARTED' : 'LOCKED',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }))
@@ -226,7 +250,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
       <div className="mb-10 reveal stagger-1">
         <button
           onClick={onCancel}
-          className="interactive inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors duration-200"
+          className="interactive inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted hover:text-brand transition-colors duration-200"
         >
           <ArrowRight className="w-3.5 h-3.5 -rotate-180" />
           <span>Back to Home</span>
@@ -235,25 +259,26 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
       <div className="reveal stagger-2">
         <div className="flex items-center gap-2 mb-2">
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold tracking-wider uppercase border border-indigo-100">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-soft text-brand text-xs font-bold tracking-wider uppercase border border-brand-100">
             <ShieldCheck className="w-3 h-3" />
-            <span>Zero MDR Tax Engine</span>
+            <span>0% MDR Calculator</span>
           </span>
-          <span className="text-xs text-slate-400">• Step 1 of 2</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight mb-1">
           Scan & Split UPI
         </h1>
-        <p className="text-sm text-slate-600">
-          Scan any merchant QR code, split the amount into installments under ₹2,000 each to pay 0% MDR tax.
+        <p className="text-sm text-muted">
+          Scan a merchant QR or enter the details, split the bill into installments, then open each installment in your UPI app.
         </p>
       </div>
+
+      <DisclaimerNotice compact className="mb-8" />
 
       {/* Error Banner */}
       {apiError && (
         <div className="mb-8 reveal stagger-3">
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div>
               <h4 className="font-bold text-rose-900 mb-0.5">Validation Notice</h4>
               <p className="text-rose-700 text-xs">{apiError}</p>
@@ -263,16 +288,16 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
       )}
 
       {/* Main Card */}
-      <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-xl reveal stagger-4">
+      <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-[0_24px_70px_-45px_rgba(17,20,57,0.35)] reveal stagger-4">
         
         {/* Scan Success Banner */}
         {scanSuccessNotification && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 flex flex-wrap items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                   Merchant Scanned
                 </span>
@@ -280,29 +305,29 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   Auto-filled
                 </span>
               </div>
-              <h4 className="font-bold text-sm text-slate-900 mb-1">{scanSuccessNotification.merchant}</h4>
-              <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-200">
+              <h4 className="font-bold text-sm text-ink mb-1">{scanSuccessNotification.merchant}</h4>
+              <div className="flex flex-wrap gap-2 text-xs text-muted">
+                <span className="max-w-full truncate font-mono font-bold text-ink bg-white px-2 py-0.5 rounded border border-line">
                   {scanSuccessNotification.vpa}
                 </span>
                 {scanSuccessNotification.amount && (
-                  <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                  <span className="font-bold text-brand-dark bg-brand-soft px-2 py-0.5 rounded border border-brand-100">
                     Bill: {formatINR(scanSuccessNotification.amount)}
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex w-full items-center justify-end gap-2 shrink-0 sm:w-auto">
               <button
                 onClick={() => setQrMethod('scan')}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 hover:border-indigo-300 transition-colors"
+                className="text-xs font-bold text-brand hover:text-brand-dark px-2.5 min-h-11 rounded-lg bg-white border border-line hover:border-brand/30 transition-colors flex items-center justify-center"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span className="ml-1">Scan Again</span>
               </button>
               <button
                 onClick={() => setScanSuccessNotification(null)}
-                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center"
+                className="min-w-11 min-h-11 rounded-lg text-muted-soft hover:text-muted hover:bg-line-soft transition-colors flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -314,37 +339,42 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted">
                 1. Scan Merchant UPI QR Code
               </label>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Point your camera or upload an image to pre-fill details.
               </p>
             </div>
           </div>
 
           {/* QR Method Tabs */}
-          <div className="flex p-1 bg-slate-100 rounded-2xl text-xs font-bold sm:flex-nowrap flex-wrap">
+          <div className="flex p-1 bg-lilac border border-line rounded-2xl text-xs font-bold sm:flex-nowrap flex-wrap gap-1">
             {['scan', 'upload', 'manual'].map((method) => {
               const labels: Record<string, { icon: LucideIcon; label: string }> = {
                 scan: { icon: Camera, label: 'Scan Camera' },
                 upload: { icon: Upload, label: 'Upload QR' },
                 manual: { icon: Edit3, label: 'Manual Input' }
               };
-              const { icon: Icon, label } = labels[method];
+              const { icon: Icon } = labels[method];
               return (
                 <button
                   key={method}
-                  onClick={() => setQrMethod(method as 'scan' | 'upload' | 'manual')}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl transition-all duration-200 cursor-pointer text-center min-h-[38px] sm:min-h-auto flex items-center justify-center gap-2 ${
+                  onClick={() => {
+                    setQrMethod(method as 'scan' | 'upload' | 'manual');
+                    setUploadError(null);
+                    setIsDraggingImage(false);
+                  }}
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-center min-h-11 flex items-center justify-center gap-2 border ${
                     qrMethod === method
-                      ? 'bg-white text-indigo-600 shadow-sm border border-indigo-200'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent border'
+                      ? 'bg-white text-brand shadow-sm border-brand/20'
+                      : 'text-muted hover:text-ink hover:bg-white/70 border-transparent'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${qrMethod === method ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span className={qrMethod === 'manual' && method === 'manual' ? 'block' : 'hidden sm:inline'}>{label}</span>
-                  <span className={qrMethod === 'manual' && method === 'manual' ? 'inline sm:hidden' : 'hidden'}>{label === 'Manual Input' ? 'Manual' : label}</span>
+                  <Icon className={`w-3.5 h-3.5 ${qrMethod === method ? 'text-brand' : 'text-muted-soft'}`} />
+                  <span className="text-[11px] sm:text-xs">
+                    {method === 'manual' ? 'Manual' : method === 'scan' ? 'Scan' : 'Upload'}
+                  </span>
                 </button>
               );
             })}
@@ -356,32 +386,68 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               <CameraQRScanner
                 onScan={(raw, parsed) => handleScannedData(raw, parsed)}
                 onClose={() => setQrMethod('manual')}
-                className="max-h-[400px]"
+                className="max-h-100"
               />
             </div>
           )}
 
           {/* Upload Mode */}
           {qrMethod === 'upload' && (
-            <div className="mt-4 border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer group">
-              <input
-                id="qr-image-file-input"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <label className="flex flex-col items-center justify-center">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Upload className="w-6 h-6" />
+            <div className="mt-4">
+              <label
+                htmlFor="qr-image-file-input"
+                aria-busy={isReadingQr}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!isReadingQr) setIsDraggingImage(true);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setIsDraggingImage(false);
+                }}
+                onDrop={handleImageDrop}
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 text-center transition-colors group focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 ${
+                  isReadingQr
+                    ? 'cursor-wait border-brand/40 bg-brand-soft/30'
+                    : isDraggingImage
+                      ? 'cursor-copy border-brand bg-brand-soft/70 shadow-sm'
+                      : 'cursor-pointer border-line hover:border-brand-300 hover:bg-brand-soft/50'
+                }`}
+              >
+                <input
+                  id="qr-image-file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleImageUpload}
+                  disabled={isReadingQr}
+                  className="sr-only"
+                />
+                <div className={`w-12 h-12 rounded-xl bg-brand-soft text-brand flex items-center justify-center mb-3 transition-transform ${
+                  isReadingQr ? '' : 'group-hover:scale-110'
+                }`}>
+                  {isReadingQr ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Upload className="w-6 h-6" />
+                  )}
                 </div>
-                <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">
-                  Upload merchant QR image
+                <span className={`text-sm font-bold ${isReadingQr ? 'text-brand' : 'text-ink-soft group-hover:text-brand'}`}>
+                  {isReadingQr ? 'Reading QR code…' : 'Upload a merchant QR image'}
                 </span>
-                <span className="text-xs text-slate-500 mt-1">
-                  PNG, JPG, WEBP from any UPI app
+                <span className="text-xs text-muted mt-1">
+                  {isReadingQr ? 'Looking for a UPI payment code' : isDraggingImage ? 'Drop the image here' : 'Click anywhere or drop a PNG, JPG, or WEBP'}
                 </span>
               </label>
+
+              {uploadError && (
+                <div role="alert" className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                  <div>
+                    <p className="text-xs font-bold text-rose-900">Couldn’t use that image</p>
+                    <p className="text-xs text-rose-700 mt-0.5">{uploadError}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -389,7 +455,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           {qrMethod === 'manual' && (
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">
                   Merchant UPI ID (VPA)
                 </label>
                 <input
@@ -410,7 +476,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">
                   Merchant Name
                 </label>
                 <input
@@ -429,11 +495,11 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
 
           {/* Decoded Merchant Info */}
           {parsedUPI.pa && (
-            <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="mt-6 p-4 rounded-2xl bg-lilac border border-line">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Store className="w-4 h-4 text-indigo-600" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Store className="w-4 h-4 text-brand" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
                     Decoded Merchant Information
                   </span>
                 </div>
@@ -443,7 +509,7 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                     : 'text-rose-700 bg-rose-100'
                 }`}>
                   <ShieldCheck className={`w-3 h-3 ${parsedUPI.isValid ? 'text-emerald-600' : 'text-rose-500'}`} />
-                  {parsedUPI.isValid ? 'VPA Verified' : 'VPA Not Verified'}
+                  {parsedUPI.isValid ? 'Valid UPI ID format' : 'Check UPI ID format'}
                 </span>
               </div>
               {!parsedUPI.isValid && parsedUPI.validationErrors.length > 0 && (
@@ -453,16 +519,16 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               )}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="block text-xs text-slate-500 font-medium mb-1">Merchant</span>
-                  <p className="font-bold text-slate-900">{parsedUPI.pn || 'Merchant Store'}</p>
+                  <span className="block text-xs text-muted font-medium mb-1">Merchant</span>
+                  <p className="font-bold text-ink">{parsedUPI.pn || 'Merchant Store'}</p>
                 </div>
                 <div>
-                  <span className="block text-xs text-slate-500 font-medium mb-1">UPI ID</span>
-                  <p className="font-mono font-bold text-slate-900 text-xs truncate">{parsedUPI.pa}</p>
+                  <span className="block text-xs text-muted font-medium mb-1">UPI ID</span>
+                  <p className="font-mono font-bold text-ink text-xs truncate">{parsedUPI.pa}</p>
                 </div>
                 <div>
-                  <span className="block text-xs text-slate-500 font-medium mb-1">Total Amount</span>
-                  <p className="font-extrabold text-indigo-600">{formatINR(totalAmount)}</p>
+                  <span className="block text-xs text-muted font-medium mb-1">Total Amount</span>
+                  <p className="font-extrabold text-brand">{formatINR(totalAmount)}</p>
                 </div>
               </div>
             </div>
@@ -470,17 +536,17 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
         </div>
 
         {/* Section 2: Amount */}
-        <div className="mt-10 border-t border-slate-100 pt-8 space-y-4">
+        <div className="mt-10 border-t border-line-soft pt-8 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                2. Total Payment Amount
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                2. Total Bill Amount
               </label>
-              <p className="text-xs text-slate-500 mt-0.5">Enter or adjust the bill amount</p>
+              <p className="text-xs text-muted mt-0.5">Enter or adjust the bill amount</p>
             </div>
           </div>
           <div className="relative max-w-md">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-slate-300">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-muted-soft">
               ₹
             </span>
             <input
@@ -506,10 +572,10 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   setTotalAmount(amt);
                   setAmountInputStr(amt.toString());
                 }}
-                className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer min-h-[38px] flex items-center justify-center ${
+                className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer min-h-11 flex items-center justify-center ${
                   totalAmount === amt
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                    ? 'bg-ink text-white border-ink shadow-md shadow-ink/15'
+                    : 'bg-white text-muted border-line hover:bg-lilac hover:border-brand/20'
                 }`}
               >
                 ₹{amt.toLocaleString('en-IN')}
@@ -517,37 +583,37 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             ))}
           </div>
 
-          {/* MDR Tax Banner */}
+          {/* MDR banner */}
           <div className={`mt-6 p-5 rounded-2xl border transition-all duration-300 ${
             singleExceeds
               ? 'bg-amber-50 border-amber-200 text-amber-900'
               : 'bg-emerald-50 border-emerald-200 text-emerald-900'
           }`}>
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 singleExceeds ? 'bg-amber-500' : 'bg-emerald-600'
               }`}>
                 <Percent className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    MDR on Single Payment
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                    MDR on a single payment
                   </span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     singleExceeds ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
                   }`}>
-                    {singleExceeds ? 'Taxable' : '0% Free'}
+                    {singleExceeds ? 'MDR applies' : '0% MDR'}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-slate-900">{formatINR(singleTax)}</span>
-                  <span className="text-xs font-bold text-slate-500">MDR</span>
+                  <span className="text-2xl font-black text-ink">{formatINR(singleTax)}</span>
+                  <span className="text-xs font-bold text-muted">MDR</span>
                 </div>
-                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                <p className="text-xs text-muted mt-2 leading-relaxed">
                   {singleExceeds ? (
                     <>
-                      Merchant transactions above ₹2,000 attract <strong>0.4% MDR</strong> (capped at ₹300 for ₹75,000+). Split this bill into installments ≤ ₹2,000 each to pay <strong className="text-emerald-600 font-bold">₹0 MDR</strong>.
+                      Merchant transactions above ₹2,000 attract <strong>0.4% MDR</strong> (capped at ₹300 for ₹75,000+). Split this bill into installments ≤ ₹2,000 each to stay in the <strong className="text-emerald-600 font-bold">0% MDR</strong> bracket.
                     </>
                   ) : (
                     <>
@@ -561,35 +627,35 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
         </div>
 
         {/* Section 3: Split Configuration */}
-        <div className="mt-10 border-t border-slate-100 pt-8 space-y-6">
+        <div className="mt-10 border-t border-line-soft pt-8 space-y-6">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted">
                 3. Split Configuration
               </label>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Choose number of installments. Keep each ≤ ₹2,000 for 0% MDR.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
             <button
               onClick={() => setSplitMode('equal')}
-              className={`interactive px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              className={`interactive px-5 py-3 rounded-xl text-sm font-bold transition-all duration-200 min-h-12 border ${
                 splitMode === 'equal'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300'
+                  ? 'bg-ink text-white border-ink shadow-md shadow-ink/15'
+                  : 'text-muted bg-white border-line hover:text-ink hover:border-brand/20'
               }`}
             >
               Equal Split
             </button>
             <button
               onClick={() => setSplitMode('custom')}
-              className={`interactive px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+              className={`interactive px-5 py-3 rounded-xl text-sm font-bold transition-all duration-200 min-h-12 border ${
                 splitMode === 'custom'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300'
+                  ? 'bg-ink text-white border-ink shadow-md shadow-ink/15'
+                  : 'text-muted bg-white border-line hover:text-ink hover:border-brand/20'
               }`}
             >
               Custom Amounts
@@ -598,15 +664,15 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               <button
                 type="button"
                 onClick={() => setSplitAmounts(computeEqualSplits(totalAmount, numberOfPayments))}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                className="text-sm font-bold text-brand hover:text-brand-dark px-4 py-3 rounded-xl bg-brand-soft hover:bg-brand-100 transition-colors min-h-12"
               >
                 Reset evenly
               </button>
             )}
           </div>
 
-          {/* Payment count buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 mb-6">
+          {/* Installment count buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 mb-6">
             {[2, 3, 4, 5, 6, 8].map((count) => {
               const perSplit = totalAmount / count;
               const isExempt = perSplit <= THRESHOLD;
@@ -615,49 +681,51 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                   key={count}
                   type="button"
                   onClick={() => setNumberOfPayments(count)}
-                  className={`py-1.5 px-1 rounded-xl text-center border transition-all duration-200 cursor-pointer min-h-[40px] flex flex-col items-center justify-center gap-0.5 ${
+                  className={`py-3 px-2 rounded-2xl text-center border transition-all duration-200 cursor-pointer min-h-16 flex flex-col items-center justify-center gap-1 ${
                     numberOfPayments === count
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
+                      ? 'bg-ink text-white border-ink shadow-md shadow-ink/15'
+                      : 'bg-white text-muted border-line hover:border-brand/20 hover:text-ink'
                   }`}
                 >
-                  <span className="text-[9px] font-bold">{count}x</span>
-                  <span className={`text-[7px] font-bold mt-0 ${
-                    isExempt ? 'text-emerald-600' : 'text-amber-600'
+                  <span className="text-sm font-black">{count}x</span>
+                  <span className={`text-[10px] font-bold ${
+                    numberOfPayments === count ? 'text-white/70' : isExempt ? 'text-emerald-600' : 'text-amber-600'
                   }`}>
                     {isExempt ? '0% MDR' : 'MDR'}
                   </span>
                 </button>
               );
             })}
-            <div className={`p-1 rounded-xl border flex flex-col items-center justify-center min-h-[40px] gap-0.5 ${numberOfPayments > 8 ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white'}`}>
-              <span className="text-[8px] font-bold text-slate-500 uppercase">Custom</span>
-              <div className="flex items-center gap-0.5 mt-0.5">
+            <div className={`col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-6 p-4 rounded-2xl border flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-4 ${numberOfPayments > 8 ? 'border-brand/30 bg-brand-soft' : 'border-line bg-white'}`}>
+              <div className="min-w-0 text-left">
+                <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Custom installments</span>
+                <p className="text-xs text-muted mt-1">
+                  {maxZeroMdrSplits ? `Up to ${maxZeroMdrSplits} installments stay at 0% MDR` : 'Enter an amount to see the recommended count'}
+                </p>
+              </div>
+              <div className="flex items-center justify-between min-[420px]:justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setNumberOfPayments(Math.max(2, numberOfPayments - 1))}
-                  aria-label="Decrease number of payments"
-                  className="w-4 h-4 rounded bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center cursor-pointer"
+                  aria-label="Decrease number of installments"
+                  className="min-w-12 min-h-12 rounded-xl bg-white border border-line text-muted hover:text-ink hover:border-brand/25 font-bold text-lg flex items-center justify-center cursor-pointer transition-colors"
                 >
                   −
                 </button>
-                <span className="text-xs font-bold text-slate-900 w-5 text-center">{numberOfPayments}</span>
+                <span className="text-lg font-black text-ink min-w-8 text-center">{numberOfPayments}</span>
                 <button
                   type="button"
                   onClick={() => setNumberOfPayments(numberOfPayments + 1)}
-                  aria-label="Increase number of payments"
-                  className="w-4 h-4 rounded bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center cursor-pointer"
+                  aria-label="Increase number of installments"
+                  className="min-w-12 min-h-12 rounded-xl bg-white border border-line text-muted hover:text-ink hover:border-brand/25 font-bold text-lg flex items-center justify-center cursor-pointer transition-colors"
                 >
                   +
                 </button>
               </div>
-              <p className="text-[7px] text-slate-500 mt-0.5">
-                {maxZeroMdrSplits ? `Max ${maxZeroMdrSplits} for 0% MDR` : 'Enter amount'}
-              </p>
             </div>
           </div>
 
-          {/* Live UPI Tax & Surcharge Advisor */}
+          {/* Live MDR guide */}
           <UPITaxAdvisor
             totalAmount={totalAmount}
             numberOfPayments={numberOfPayments}
@@ -669,19 +737,19 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
           {/* Installment Breakdown */}
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
                 Installment Breakdown
               </h4>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-muted-soft">
                 Threshold: ≤ {formatINR(THRESHOLD)} = 0% MDR
               </span>
             </div>
 
             {splitAmounts.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-slate-50/50 border border-dashed border-slate-200 text-center">
-                <QrCode className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm font-bold text-slate-700 mb-1">Enter amount to see breakdown</p>
-                <p className="text-xs text-slate-500">
+              <div className="p-8 rounded-2xl bg-lilac/50 border border-dashed border-line text-center">
+                <QrCode className="w-8 h-8 text-line mx-auto mb-3" />
+                <p className="text-sm font-bold text-muted mb-1">Enter amount to see breakdown</p>
+                <p className="text-xs text-muted">
                   Scan a QR or enter bill amount above.
                 </p>
               </div>
@@ -692,15 +760,15 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                 return (
                   <div
                     key={idx}
-                    className="group flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-100 hover:shadow-sm transition-all duration-200"
+                    className="group flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-white border border-line hover:border-brand/20 hover:shadow-md transition-all duration-200"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 shrink-0 rounded-xl bg-brand-soft text-brand flex items-center justify-center font-bold text-xs">
                         {idx + 1}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-900">Payment {idx + 1}</span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-ink">Installment {idx + 1}</span>
                           {exceedsThreshold ? (
                             <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
                               0.4% MDR
@@ -711,12 +779,12 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                             </span>
                           )}
                         </div>
-                        <span className="block text-[10px] text-slate-500 mt-0.5">
-                          {idx === 0 ? 'Due Immediately' : 'Unlocks Sequentially'} • {exceedsThreshold ? 'Above ₹2,000 threshold' : 'Under ₹2,000 exempt'}
+                        <span className="block text-[10px] text-muted mt-0.5">
+                          Pay in any order • {exceedsThreshold ? 'Above ₹2,000 threshold' : 'Under ₹2,000: 0% MDR'}
                         </span>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex w-full min-[420px]:w-auto items-center justify-between gap-3 text-right">
                       {splitMode === 'custom' ? (
                         <input
                           type="number"
@@ -724,11 +792,11 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
                           step="0.01"
                           value={amt}
                           onChange={(e) => handleCustomAmountChange(idx, e.target.value)}
-                          aria-label={`Payment ${idx + 1} amount`}
-                          className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-sm font-bold text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                          aria-label={`Installment ${idx + 1} amount`}
+                          className="w-24 min-[420px]:w-28 min-h-11 rounded-lg border border-line bg-white px-2 py-1 text-right text-sm font-bold text-ink focus:border-brand focus:ring-1 focus:ring-brand"
                         />
                       ) : (
-                        <span className="text-sm font-black text-slate-900 block">{formatINR(amt)}</span>
+                        <span className="text-sm font-black text-ink block">{formatINR(amt)}</span>
                       )}
                       <span className={`text-[9px] font-bold ${exceedsThreshold ? 'text-amber-700' : 'text-emerald-700'}`}>
                         MDR: {exceedsThreshold ? `0.4% (${formatINR(instTax)})` : '₹0.00 (0%)'}
@@ -747,56 +815,55 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
             }`}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-bold">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-600">Total:</span>
-                  <span className="text-slate-900 font-extrabold">{formatINR(totalAmount)}</span>
-                  <span className="text-slate-400 mx-2">|</span>
-                  <span className="text-slate-600">Split Sum:</span>
-                  <span className="text-indigo-700 font-extrabold">{formatINR(currentSplitSum)}</span>
+                  <span className="text-muted">Total:</span>
+                  <span className="text-ink font-extrabold">{formatINR(totalAmount)}</span>
+                  <span className="text-muted-soft mx-2">|</span>
+                  <span className="text-muted">Split Sum:</span>
+                  <span className="text-brand-dark font-extrabold">{formatINR(currentSplitSum)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">Remaining:</span>
+                  <span className="text-muted">Remaining:</span>
                   <span className={`font-black ${remainingDifference === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
                     {formatINR(remainingDifference)}
                   </span>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">
-                <strong className="text-slate-700">Split Guarantee:</strong> Sum must equal total to 0 paise precision.
+              <p className="text-[10px] text-muted mt-2">
+                <strong className="text-muted">Split Guarantee:</strong> Sum must equal total to 0 paise precision.
               </p>
             </div>
           </div>
 
-          {/* UPI Gateways */}
-          <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Authorized via</span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {['phonepe', 'gpay', 'paytm', 'bhim', 'cred', 'amazonpay', 'navi', 'other'].map((gw) => (
-                <div key={gw} className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                  <PaymentGatewayIcon gateway={gw} size="xs" />
-                  <span className="text-[10px] font-bold text-slate-700 capitalize">{gw}</span>
-                </div>
-              ))}
+          {/* Next step */}
+          <div className="mt-6 p-4 rounded-2xl bg-lilac border border-line">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Next step</p>
+                <p className="text-sm text-muted mt-1 leading-relaxed">
+                  Create the plan, then open any installment in PhonePe, Google Pay, Paytm, BHIM, or another UPI app. The amount and merchant UPI ID are filled in for you.
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-4 reveal stagger-5">
+        <div className="mt-10 pt-6 border-t border-line-soft flex flex-col-reverse sm:flex-row gap-4 reveal stagger-5">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto flex-1 btn-secondary min-h-[52px] px-8 text-base"
+            className="w-full sm:w-auto flex-1 btn-secondary min-h-13 px-8 text-base"
           >
             Cancel
           </button>
           <button
-            id="create-payment-plan-submit-btn"
+            id="create-split-plan-submit-btn"
             type="button"
             disabled={!isSplitValid || isSubmitting || !parsedUPI.pa || !parsedUPI.isValid}
             onClick={handleSubmitPlan}
-            className="w-full sm:w-auto flex-1 btn-primary min-h-[52px] px-10 text-base"
+            className="w-full sm:w-auto flex-1 btn-primary min-h-13 px-10 text-base"
           >
             {isSubmitting ? (
               <>
@@ -805,12 +872,17 @@ export const CreateSplit: React.FC<CreateSplitProps> = ({ onPlanCreated, onCance
               </>
             ) : (
               <>
-                <span>Create Payment Plan</span>
+                <span>Create Split Plan</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </div>
+
+        <p className="mt-4 text-center text-[11px] leading-relaxed text-muted">
+          MDR Free Split only calculates the split and opens a UPI payment link. Pay the
+          merchant directly in your UPI app; no PIN is entered or stored here.
+        </p>
       </div>
     </div>
   );

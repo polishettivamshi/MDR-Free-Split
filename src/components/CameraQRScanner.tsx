@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import jsQR from 'jsqr';
 import {
   Camera,
   FlipHorizontal,
@@ -14,6 +13,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { parseUPIUri, formatINR } from '../lib/upi';
+import { loadQrDecoder } from '../lib/qrDecoder';
 import { ParsedUPI } from '../types';
 
 interface CameraQRScannerProps {
@@ -33,6 +33,7 @@ type BarcodeDetectorConstructor = new (options: { formats: string[] }) => {
 type TorchCapabilities = MediaTrackCapabilities & { torch?: boolean };
 type TorchConstraintSet = MediaTrackConstraintSet & { torch?: boolean };
 type AudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
+type JsQrDecoder = typeof import('jsqr').default;
 
 export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   onScan,
@@ -44,6 +45,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const lastScanTimeRef = useRef<number>(0);
+  const jsQrRef = useRef<JsQrDecoder | null>(null);
 
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
@@ -159,17 +161,20 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (ctx) {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            try {
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              // attemptBoth enables scanning both standard and inverted QR codes
-              const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: 'attemptBoth'
-              });
-              if (code && code.data) {
-                detectedCode = code.data;
+            const jsQR = jsQrRef.current;
+            if (jsQR) {
+              try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                // attemptBoth enables scanning both standard and inverted QR codes
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                  inversionAttempts: 'attemptBoth'
+                });
+                if (code && code.data) {
+                  detectedCode = code.data;
+                }
+              } catch {
+                // Canvas read error
               }
-            } catch {
-              // Canvas read error
             }
           }
         }
@@ -234,7 +239,6 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
       }
     } catch (err) {
       const error = err as { name?: string; message?: string };
-      console.warn('Camera access getUserMedia error:', error);
       setIsInitializing(false);
 
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -272,6 +276,20 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
     }
   };
 
+  // Load the jsQR fallback in its own chunk. The native BarcodeDetector API
+  // can still scan while the chunk is loading.
+  useEffect(() => {
+    let mounted = true;
+    void loadQrDecoder()
+      .then((decoder) => {
+        if (mounted) jsQrRef.current = decoder;
+      })
+      .catch((error) => console.error('Failed to load QR decoder:', error));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Start on mount and cleanup on unmount
   useEffect(() => {
     startCamera(facingMode);
@@ -289,23 +307,28 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setCameraError('Could not read this image. Please try another image.');
-          return;
-        }
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth'
-        });
-        if (code && code.data) {
-          handleSuccess(code.data);
-        } else {
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setCameraError('Could not read this image. Please try another image.');
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, img.width, img.height);
+          const jsQR = jsQrRef.current ?? (await loadQrDecoder());
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth'
+          });
+          if (code && code.data) {
+            handleSuccess(code.data);
+          } else {
+            setCameraError('Could not decode a readable UPI QR code from the selected image. Please try another image.');
+          }
+        } catch {
           setCameraError('Could not decode a readable UPI QR code from the selected image. Please try another image.');
         }
       };
@@ -322,11 +345,11 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
   };
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden bg-slate-950 text-white border border-slate-800 shadow-xl ${className}`}>
+    <div className={`relative rounded-2xl overflow-hidden bg-ink text-white border border-white/10 shadow-xl ${className}`}>
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 backdrop-blur-xs border-b border-slate-800/80 z-20">
+      <div className="flex items-center justify-between px-4 py-3 bg-ink/90 backdrop-blur-xs border-b border-white/10 z-20">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-brand-gradient text-white flex items-center justify-center shadow-sm shadow-brand/20">
             <Camera className="w-4 h-4" />
           </div>
           <div>
@@ -334,7 +357,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
               UPI Merchant Scanner
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </h3>
-            <p className="text-[11px] text-slate-400">Point at counter QR or UPI soundbox QR</p>
+            <p className="text-[11px] text-white/50">Point at counter QR or UPI soundbox QR</p>
           </div>
         </div>
 
@@ -343,8 +366,8 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
             <button
               type="button"
               onClick={toggleTorch}
-              className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                torchOn ? 'bg-amber-500/20 text-amber-300' : 'text-slate-400 hover:text-white hover:bg-white/10'
+              className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
+                torchOn ? 'bg-amber-500/20 text-amber-300' : 'text-white/50 hover:text-white hover:bg-white/10'
               }`}
               title={torchOn ? 'Turn off flashlight' : 'Turn on flashlight'}
             >
@@ -356,7 +379,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
             <button
               type="button"
               onClick={toggleFacingMode}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               title="Flip Camera (Front/Rear)"
             >
               <FlipHorizontal className="w-4 h-4" />
@@ -367,7 +390,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer ml-1"
+              className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer ml-1"
               title="Close Scanner"
             >
               <X className="w-4 h-4" />
@@ -377,7 +400,7 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
       </div>
 
       {/* Main Viewfinder Frame */}
-      <div className="relative aspect-square sm:aspect-[4/3] max-h-[380px] w-full bg-black flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square sm:aspect-4/3 max-h-95 w-full bg-[#080a18] flex items-center justify-center overflow-hidden">
         {/* HTML5 Video Stream */}
         <video
           ref={videoRef}
@@ -394,34 +417,34 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
 
         {/* Initializing Spinner */}
         {isInitializing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 z-10 p-4">
-            <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mb-3" />
-            <p className="text-sm font-semibold text-slate-200">Starting Camera Access...</p>
-            <p className="text-xs text-slate-500 mt-1">Please approve camera permission in your browser prompt</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/90 z-10 p-4">
+            <RefreshCw className="w-8 h-8 text-brand-400 animate-spin mb-3" />
+            <p className="text-sm font-semibold text-line">Starting Camera Access...</p>
+            <p className="text-xs text-white/45 mt-1">Please approve camera permission in your browser prompt</p>
           </div>
         )}
 
         {/* Camera Error / Permission Fallback */}
         {cameraError && !isInitializing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-10 p-6 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/95 z-10 p-6 text-center">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mb-3">
               <AlertCircle className="w-6 h-6" />
             </div>
             <h4 className="text-sm font-bold text-white mb-1">Camera Notice</h4>
-            <p className="text-xs text-slate-400 max-w-sm mb-4 leading-relaxed">{cameraError}</p>
+            <p className="text-xs text-white/50 max-w-sm mb-4 leading-relaxed">{cameraError}</p>
 
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => startCamera(facingMode)}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                className="min-h-11 px-4 bg-brand-gradient hover:brightness-105 text-white text-xs font-bold rounded-full shadow-md shadow-brand/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Retry Camera
               </button>
 
-              <label className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-700">
-                <Upload className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="min-h-11 px-4 bg-white/5 hover:bg-white/10 text-white/80 text-xs font-bold rounded-full transition-colors cursor-pointer flex items-center gap-1.5 border border-white/15">
+                <Upload className="w-3.5 h-3.5 text-brand-400" />
                 Upload QR Image
                 <input
                   type="file"
@@ -438,25 +461,25 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
         {cameraActive && (
           <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
             {/* Viewfinder Box */}
-            <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-2xl border-2 border-indigo-400/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-2xl border-2 border-brand-400/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
               {/* Corner brackets */}
-              <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg" />
-              <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg" />
-              <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg" />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-lg" />
+              <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-brand-400 rounded-tl-lg" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-brand-400 rounded-tr-lg" />
+              <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-brand-400 rounded-bl-lg" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-brand-400 rounded-br-lg" />
 
               {/* Animated laser scanning bar */}
-              <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#38bdf8] animate-[scanLaser_2.2s_ease-in-out_infinite]" />
+              <div className="absolute left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-accent to-transparent shadow-[0_0_12px_#38bdf8] animate-[scanLaser_2.2s_ease-in-out_infinite]" />
 
               {/* Center crosshair dot */}
               <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                <div className="w-2 h-2 rounded-full bg-accent" />
               </div>
             </div>
 
             {/* Instruction Badge */}
-            <div className="mt-4 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-xs text-[11px] font-semibold text-slate-300 border border-slate-700/80 flex items-center gap-1.5 shadow-lg">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+            <div className="mt-4 px-3.5 py-1.5 rounded-full bg-ink/80 backdrop-blur-xs text-[11px] font-semibold text-line border border-white/20 flex items-center gap-1.5 shadow-lg">
+              <Sparkles className="w-3.5 h-3.5 text-brand-400 animate-spin" />
               Align merchant QR code within brackets
             </div>
           </div>
@@ -490,13 +513,13 @@ export const CameraQRScanner: React.FC<CameraQRScannerProps> = ({
       </div>
 
       {/* Bottom Bar: Quick Upload QR Image */}
-      <div className="p-3.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3">
-        <span className="text-xs text-slate-400 flex items-center gap-1.5">
-          <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+      <div className="p-3.5 bg-ink border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs text-white/50 flex items-center gap-1.5">
+          <QrCode className="w-3.5 h-3.5 text-brand-400" />
           <span>Point camera at any merchant counter QR</span>
         </span>
-        <label className="text-xs font-semibold text-indigo-300 hover:text-white flex items-center gap-1.5 cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors shrink-0">
-          <Upload className="w-3.5 h-3.5 text-indigo-400" />
+        <label className="min-h-11 text-xs font-semibold text-brand-300 hover:text-white flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 rounded-full border border-white/15 transition-colors shrink-0">
+          <Upload className="w-3.5 h-3.5 text-brand-400" />
           <span>Upload QR Image</span>
           <input
             type="file"
