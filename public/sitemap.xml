@@ -13,6 +13,36 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://mdr-free-split.vercel.app/about</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://mdr-free-split.vercel.app/contact</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://mdr-free-split.vercel.app/privacy</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mdr-free-split.vercel.app/terms</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mdr-free-split.vercel.app/disclaimer</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://mdr-free-split.vercel.app/guides/upi-mdr-in-2026</loc>
     <lastmod>2026-10-23</lastmod>
     <changefreq>monthly</changefreq>
@@ -49,33 +79,27 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mdr-free-split.vercel.app/about</loc>
-    <lastmod>2026-10-23</lastmod>
+    <loc>https://mdr-free-split.vercel.app/guides/rupay-credit-card-upi-mdr</loc>
+    <lastmod>2026-11-09</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mdr-free-split.vercel.app/contact</loc>
-    <lastmod>2026-10-23</lastmod>
+    <loc>https://mdr-free-split.vercel.app/guides/upi-soundbox-vs-mdr-costs</loc>
+    <lastmod>2026-11-09</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mdr-free-split.vercel.app/privacy</loc>
-    <lastmod>2026-10-23</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <loc>https://mdr-free-split.vercel.app/guides/ppi-wallet-interoperability-upi-mdr</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mdr-free-split.vercel.app/terms</loc>
-    <lastmod>2026-10-23</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://mdr-free-split.vercel.app/disclaimer</loc>
-    <lastmod>2026-10-23</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <loc>https://mdr-free-split.vercel.app/guides/upi-daily-transaction-limits-2026</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

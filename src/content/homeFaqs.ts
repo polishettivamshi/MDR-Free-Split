@@ -35,5 +35,21 @@ export const HOME_FAQS: HomeFaq[] = [
   {
     q: 'Does splitting a UPI payment reduce MDR?',
     a: 'Splitting a bill creates separate UPI payment instructions, each assessed on its own amount. That arithmetic can keep individual payments at or below the ₹2,000 threshold, but it does not change the merchant’s classification or guarantee a particular outcome. Use splits for genuine shared bills or agreed part-payments, not to disguise a transaction.'
+  },
+  {
+    q: 'Can a merchant charge me extra for paying via UPI?',
+    a: 'No. RBI and NPCI guidelines prohibit merchants from levying surcharges or convenience fees on customers paying via standard UPI. MDR is a merchant-side acquiring fee deducted from settlement, not added to the customer’s invoice.'
+  },
+  {
+    q: 'How does the P2PM small merchant exemption work?',
+    a: 'Under NPCI rules, micro-merchants who receive payments into personal savings accounts using a personal QR code (P2PM) are exempt from MDR as long as their monthly UPI receipts remain under ₹1,00,000. Vendors consistently crossing ₹1 Lakh/month for 3 months are transitioned to standard P2M status.'
+  },
+  {
+    q: 'What is the MDR on RuPay credit cards linked to UPI?',
+    a: 'For small merchants with annual business turnover under ₹20 Lakhs, acceptance of RuPay credit cards on UPI is 0% MDR. For standard commercial merchants, transactions up to ₹2,000 have zero interchange, while transactions above ₹2,000 carry an interchange fee of up to 2.0% plus GST.'
+  },
+  {
+    q: 'What is the daily maximum limit for UPI transactions in 2026?',
+    a: 'The standard daily UPI limit is ₹1,00,000 per 24 hours (with a maximum of 20 transactions per bank account). RBI has raised the limit to ₹5,00,000 for verified hospitals, educational institutions, direct tax payments, and IPO applications.'
   }
 ];

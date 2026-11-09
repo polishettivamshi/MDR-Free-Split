@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, CheckCircle2, Clock3, Store, BookOpen } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Smartphone, QrCode, Layers, ChevronRight, Clock3, Store, BookOpen } from 'lucide-react';
 import { SplitPlan } from '../types';
 import { PLAN_RETENTION_DAYS } from '../lib/localStore';
 import { formatINR } from '../lib/upi';
@@ -10,6 +10,8 @@ import { usePageMeta, useJsonLd } from '../lib/seo';
 import { DisclaimerNotice } from './DisclaimerNotice';
 import { GuideCard } from './content/GuideCard';
 import { PageAdZone } from './PageAdZone';
+import { InteractiveMdrCalculator } from './InteractiveMdrCalculator';
+import { P2PMMerchantSimulator } from './P2PMMerchantSimulator';
 
 interface LandingPageProps {
   recentPlans: SplitPlan[];
@@ -156,40 +158,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
             <DisclaimerNotice compact className="mt-8 max-w-2xl mx-auto text-left" />
           </div>
 
-          {/* Hero visual - phone mockup placeholder */}
-          <div className="mt-20 sm:mt-24 relative z-0 reveal stagger-3">
-            <div className="flex justify-center">
-              <div className="relative max-w-md">
-                <div className="absolute -inset-6 bg-linear-to-br from-brand/25 via-[#8b5cf6]/20 to-accent/20 rounded-[2.5rem] blur-3xl" />
-                <div className="relative bg-white/85 backdrop-blur-xl border border-line rounded-4xl p-6 shadow-[0_30px_80px_-40px_rgba(17,20,57,0.4)]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-brand" />
-                    <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-                    <div className="w-2 h-2 rounded-full bg-accent" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted">Merchant QR</span>
-                      <span className="text-xs font-mono font-bold text-ink bg-lilac border border-line px-2 py-1 rounded-lg">store@upi</span>
-                    </div>
-                    <div className="flex items-center justify-between py-3 border-t border-line-soft">
-                      <span className="text-sm font-bold text-ink">Amount</span>
-                      <span className="text-sm font-bold text-brand">₹6,000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-ink">Split into</span>
-                      <span className="text-sm font-bold text-brand-dark">3 × ₹2,000</span>
-                    </div>
-                    <div className="mt-4 p-3 rounded-xl bg-brand-soft border border-brand/15">
-                      <span className="text-xs font-bold text-brand-dark flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        At or below the ₹2,000 threshold
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Interactive Calculator Section */}
+          <div id="calculator-section" className="mt-14 sm:mt-18 relative z-10 scroll-mt-24 reveal stagger-3">
+            <InteractiveMdrCalculator />
           </div>
         </div>
       </section>
@@ -432,6 +403,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ recentPlans }) => {
           </div>
 
           <PageAdZone page="home" slot="home" className="mt-8" />
+        </div>
+      </section>
+
+      {/* Small Merchant P2PM Simulator Section */}
+      <section id="p2pm-tool" className="py-16 lg:py-24 bg-lilac/60 border-b border-line/60 scroll-mt-20 reveal">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <P2PMMerchantSimulator />
         </div>
       </section>
 

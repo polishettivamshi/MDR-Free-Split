@@ -864,6 +864,423 @@ export const GUIDES: Guide[] = [
         href: 'https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf'
       }
     ]
+  },
+  {
+    slug: 'rupay-credit-card-upi-mdr',
+    title: 'RuPay Credit Card on UPI: 2% Interchange, ₹2,000 Exemption & Rules (2026)',
+    metaTitle: 'RuPay Credit Card on UPI: 2% MDR, ₹2,000 Exemption & Rules (2026)',
+    description:
+      'A complete guide to RuPay credit cards linked to UPI: how merchant interchange works, the ₹2,000 exemption for small merchants, customer rewards, and merchant acceptance rules.',
+    category: 'Credit & Cards',
+    publishedAt: '2026-10-24',
+    updatedAt: '2026-11-09',
+    readingMinutes: 10,
+    takeaways: [
+      'Customers can link RuPay credit cards to UPI apps (BHIM, PhonePe, Google Pay, Paytm) and scan merchant QR codes without needing a physical card or POS swipe machine.',
+      'For merchant transactions of ₹2,000 or less, NPCI mandates zero interchange fee for small merchants, making micro-transactions free of acceptance charges.',
+      'For transactions above ₹2,000 at standard merchants, an interchange fee of up to 2.0% applies, paid by the merchant’s acquiring bank, not the cardholder.',
+      'Small merchants with an annual business turnover under ₹20 Lakhs are exempt from merchant charges when accepting RuPay credit card payments on UPI.'
+    ],
+    blocks: [
+      {
+        type: 'p',
+        text: 'The integration of **RuPay credit cards with UPI** has transformed digital payments across India. By linking a credit card directly to a virtual payment address, cardholders can pay at millions of QR-enabled street stalls, retail stores, and online checkouts directly from their credit line.'
+      },
+      {
+        type: 'p',
+        text: 'However, credit card economics differ fundamentally from bank-to-bank UPI transfers. Credit card transactions involve an issuing bank, credit risk, interest-free credit cycles of up to 50 days, and reward point programs. To fund these features, an **interchange fee structure** applies to RuPay credit payments.'
+      },
+      {
+        type: 'callout',
+        tone: 'info',
+        title: 'Customer rule: Zero extra fee at checkout',
+        text: 'As a customer, you cannot be surcharged or charged a higher price for paying with a RuPay credit card on UPI at any verified merchant. Any interchange fee is deducted from the merchant’s payout.'
+      },
+      { type: 'h2', text: 'How RuPay Credit Card Interchange Works on UPI' },
+      {
+        type: 'p',
+        text: 'When a customer scans a merchant QR code and chooses their linked RuPay credit card instead of their savings account, the transaction travels through the credit card payment network rails. The merchant discount rate (MDR) consists of interchange (paid to the card issuer), switch fees (paid to NPCI), and acquiring bank margins.'
+      },
+      {
+        type: 'table',
+        caption: 'Comparison of payment rails on merchant UPI QR codes (2026 Framework).',
+        headers: ['Payment Source', 'Transactions ≤ ₹2,000', 'Transactions > ₹2,000', 'Who Pays Fee'],
+        rows: [
+          ['Savings Account UPI', '0% MDR', '0.4% standard (cap ₹300)', 'Merchant'],
+          ['RuPay Credit Card on UPI', '0% (Small merchants)', 'Up to 2.0% interchange', 'Merchant'],
+          ['Prepaid Wallets (PPI)', '0% interchange', 'Up to 1.1% interchange', 'Merchant'],
+          ['POS Physical Card Swipe', '0.4% to 0.9%', '1.5% to 2.5% MDR', 'Merchant']
+        ]
+      },
+      { type: 'h2', text: 'The ₹2,000 Small Transaction Exemption' },
+      {
+        type: 'p',
+        text: 'To protect small merchants and promote everyday digital commerce, the Reserve Bank of India and NPCI established that **no interchange fee applies to RuPay credit card on UPI transactions up to ₹2,000**. If you buy groceries worth ₹1,200 or dining worth ₹1,800 using your RuPay credit card on UPI, the merchant receives the full amount with zero MDR deduction.'
+      },
+      {
+        type: 'p',
+        text: 'For payments exceeding ₹2,000, standard credit card interchange (typically 1.8% to 2.0% plus 18% GST) becomes payable by larger commercial merchants. This is why splitting a large bill into planned portions under ₹2,000 can significantly impact the acceptance economics for a neighborhood merchant.'
+      },
+      { type: 'h2', text: 'The ₹20 Lakh Annual Turnover Merchant Exemption' },
+      {
+        type: 'p',
+        text: 'NPCI issued specific guidance protecting small merchants: vendors whose annual turnover is below **₹20 Lakhs** are classified as small merchants and are exempt from paying MDR on RuPay credit card transactions, even if a customer uses credit. Larger merchants (turnover > ₹20 Lakhs) are categorized as large merchants and pay standard MDR.'
+      },
+      {
+        type: 'callout',
+        tone: 'warning',
+        title: 'Why some QR codes reject credit cards',
+        text: 'Some small merchants or P2PM personal QR codes have credit card acceptance disabled in their merchant app settings (such as PhonePe for Business or Google Pay for Business) to avoid potential MDR deductions. Peer-to-peer (P2P) personal QRs cannot accept credit cards at all.'
+      },
+      { type: 'h2', text: 'Rewards and Cashbacks on RuPay Credit UPI' },
+      {
+        type: 'p',
+        text: 'Most major banks—including HDFC Bank (Tata Neu Infinity/Plus), ICICI Bank (Coral RuPay), Axis Bank (Indian Oil RuPay), SBI Card (SimplySAVE RuPay), and Punjab National Bank—offer reward points or cashbacks on UPI spends made through RuPay credit cards. However, transactions in exempt categories (fuel, rent, utilities, government payments) often have altered reward structures.'
+      }
+    ],
+    faqs: [
+      {
+        q: 'Can I pay a friend (P2P) with a RuPay credit card on UPI?',
+        a: 'No. RuPay credit cards on UPI are strictly enabled for Person-to-Merchant (P2M) transactions. You cannot send money to friends, family members, or personal bank accounts.'
+      },
+      {
+        q: 'Is there a limit on RuPay credit card UPI payments?',
+        a: 'Yes. The default per-transaction limit is ₹1,00,000 or your credit card’s available credit limit, whichever is lower. Certain banks impose daily limits (e.g. ₹2,00,000 per 24 hours).'
+      },
+      {
+        q: 'Does the customer pay any fee for using RuPay credit card on UPI?',
+        a: 'No. Customers pay zero fees or convenience charges when scanning a merchant QR code. MDR is absorbed by the merchant.'
+      },
+      {
+        q: 'Can Visa and Mastercard credit cards be linked to UPI?',
+        a: 'Currently, the RBI and NPCI framework only supports indigenous RuPay credit cards for direct UPI linkage. Visa and Mastercard credit cards cannot be linked to UPI IDs.'
+      }
+    ],
+    sources: [
+      {
+        label: 'NPCI: Linking RuPay Credit Cards to UPI Operational Guidelines',
+        href: 'https://www.npci.org.in/what-we-do/rupay/rupay-credit-card-on-upi'
+      },
+      {
+        label: 'RBI: Enabling RuPay Credit Cards on Unified Payments Interface (UPI)',
+        href: 'https://rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx'
+      }
+    ]
+  },
+  {
+    slug: 'upi-soundbox-vs-mdr-costs',
+    title: 'UPI Soundbox vs Transaction MDR: True Monthly Cost for Indian Merchants (2026)',
+    metaTitle: 'UPI Soundbox vs MDR: Monthly Rental, Hardware Fees & True Cost (2026)',
+    description:
+      'Analyze the true monthly cost of accepting UPI payments: comparing Soundbox rental subscriptions (Paytm, PhonePe, BharatPe, Google Pay) against transaction MDR in 2026.',
+    category: 'Merchant operations',
+    publishedAt: '2026-10-25',
+    updatedAt: '2026-11-09',
+    readingMinutes: 8,
+    takeaways: [
+      'Soundboxes charge a fixed monthly rental fee between ₹99 and ₹149 plus GST, regardless of transaction count or payment size.',
+      'For a merchant doing ₹25,000/month of taxable transactions above ₹2,000, 0.4% MDR equals ₹100/month—identical to a standard soundbox rental fee.',
+      'Soundboxes eliminate fake screenshot fraud and employee theft by providing immediate bilingual audio confirmation at loud volume.',
+      'Merchants with high transaction volumes can often get soundbox rentals discounted or waived by payment aggregators.'
+    ],
+    blocks: [
+      {
+        type: 'p',
+        text: 'Walk into virtually any retail counter, tea stall, chemist, or supermarket in India, and you will hear a familiar audio chime: *“PhonePe par pachas rupaye prapt hue”* or *“Paytm par ek sau bees rupaye prapt hue”*. The **UPI Soundbox** is one of India’s most successful fintech hardware innovations.'
+      },
+      {
+        type: 'p',
+        text: 'Yet for small business owners, deciding between a plain static QR standee (which is free) and an active Soundbox (which has monthly rental fees) requires understanding your business cash flows alongside the 2026 MDR framework.'
+      },
+      { type: 'h2', text: 'How Soundbox Pricing Works' },
+      {
+        type: 'p',
+        text: 'Unlike standard transaction MDR, which is a percentage deducted from individual payments, a Soundbox operates as a hardware-as-a-service (HaaS) subscription. Providers typically charge two fee components:'
+      },
+      {
+        type: 'ul',
+        items: [
+          '**One-time onboarding or setup fee**: Ranges from ₹1 to ₹499 depending on promotional offers and acquiring bank agreements.',
+          '**Monthly rental fee**: Typically ₹99 to ₹149 per month plus 18% GST (totaling ₹116.82 to ₹175.82 per month). This covers the hardware lease, 4G cellular SIM connectivity, and server telemetry.'
+        ]
+      },
+      {
+        type: 'table',
+        caption: 'Comparison of major UPI Soundbox providers in India (2026).',
+        headers: ['Provider', 'Device Name', 'Monthly Rental', 'Battery Life', 'Languages Supported'],
+        rows: [
+          ['PhonePe', 'SmartSpeaker', '₹99 to ₹125 / month', 'Up to 4 days (2600 mAh)', 'English + 10 Regional'],
+          ['Paytm', 'Paytm Soundbox 4.0 / Pro', '₹100 to ₹149 / month', 'Up to 5 days', 'English + 11 Regional'],
+          ['Google Pay', 'SoundPod', '₹99 / month', 'Up to 4 days', 'English, Hindi + 6 Regional'],
+          ['BharatPe', 'BharatPe Speaker', '₹99 to ₹120 / month', 'Up to 3 days', 'English + 8 Regional']
+        ]
+      },
+      { type: 'h2', text: 'Soundbox Rental vs 0.4% MDR: The Crossover Math' },
+      {
+        type: 'p',
+        text: 'Under the 2026 UPI MDR framework, standard retail P2M payments above ₹2,000 incur a 0.4% base MDR. How does that compare with a ₹100/month Soundbox rental?'
+      },
+      {
+        type: 'p',
+        text: 'If a merchant accepts ₹25,000 per month in payments above ₹2,000, 0.4% MDR is exactly **₹100 per month**. Therefore:'
+      },
+      {
+        type: 'ul',
+        items: [
+          '**Below ₹25,000/month taxable volume**: The fixed Soundbox rental is actually higher than the potential transaction MDR.',
+          '**Between ₹25,000 and ₹1,00,000/month**: Soundbox rental and MDR are comparable, and many small merchants still qualify under the P2PM exemption.',
+          '**Above ₹1,00,000/month**: The Soundbox rental becomes a negligible fraction of turnover (less than 0.1%), providing immense value in preventing fraud.'
+        ]
+      },
+      { type: 'h2', text: 'Why Merchants Prefer Soundboxes Despite the Cost' },
+      {
+        type: 'p',
+        text: 'Fraud prevention is the primary reason Indian merchants willingly pay monthly soundbox rentals. In high-footfall shops (rush hours at grocery counters, restaurants, bakeries), fraudsters previously showed doctored screenshots or fake payment generator apps showing “₹500 Paid”.'
+      },
+      {
+        type: 'p',
+        text: 'A Soundbox connects directly to the payment server via an internal 4G M2M SIM card and only announces payments that have successfully settled in the merchant’s bank account. This eliminates the need for cashier phone checking or manual SMS verification.'
+      }
+    ],
+    faqs: [
+      {
+        q: 'Can a merchant get a free Soundbox?',
+        a: 'Many providers offer monthly rental waivers or full refunds if the merchant exceeds a minimum transaction threshold (e.g. 50 to 100 successful transactions per month).'
+      },
+      {
+        q: 'Does a Soundbox need Wi-Fi to work?',
+        a: 'No. All commercial soundboxes come with pre-installed 4G multi-network SIM cards (Airtel, Jio, or Vi) and work autonomously anywhere cellular coverage exists.'
+      },
+      {
+        q: 'What happens if a customer splits a bill on a Soundbox?',
+        a: 'The Soundbox announces each payment individually as soon as it clears. For example, a ₹6,000 bill split into three ₹2,000 payments will result in three clear audio announcements.'
+      },
+      {
+        q: 'Can a Soundbox be returned without cancellation penalty?',
+        a: 'Yes, most providers allow returning the device with 7 to 15 days notice, after which monthly rental deductions from daily settlements cease.'
+      }
+    ],
+    sources: [
+      {
+        label: 'NPCI: Merchant acceptance and soundbox integration standards',
+        href: 'https://www.npci.org.in/what-we-do/upi/merchant-services'
+      },
+      {
+        label: 'RBI: Guidelines on payment aggregators and offline QR standards',
+        href: 'https://www.rbi.org.in/Scripts/NotificationUser.aspx'
+      }
+    ]
+  },
+  {
+    slug: 'ppi-wallet-interoperability-upi-mdr',
+    title: 'Prepaid Wallets (PPI) on UPI: The 1.1% Interchange Fee Explained',
+    metaTitle: 'Prepaid Wallets (PPI) on UPI: 1.1% Interchange & Rules Explained',
+    description:
+      'Understand NPCI’s prepaid payment instrument (PPI) interchange rules on UPI: the 1.1% fee on merchant wallet transactions above ₹2,000, wallet loading rules, and customer impacts.',
+    category: 'PPI & Wallets',
+    publishedAt: '2026-10-26',
+    updatedAt: '2026-11-09',
+    readingMinutes: 9,
+    takeaways: [
+      'Prepaid Payment Instruments (PPIs) include digital wallets such as Paytm Wallet, PhonePe Wallet, Amazon Pay Wallet, and Sodexo food cards.',
+      'Under NPCI interoperability circulars, wallet users can scan any merchant UPI QR code and pay directly from their prepaid balance.',
+      'Merchant transactions above ₹2,000 paid via PPI wallets carry an interchange fee of up to 1.1%, paid by the merchant’s acquirer to the wallet issuer.',
+      'Regular bank-to-bank UPI payments (savings account to merchant account) are completely separate from the 1.1% PPI interchange.'
+    ],
+    blocks: [
+      {
+        type: 'p',
+        text: 'In April 2023, rumors circulated across social media claiming that “all UPI payments above ₹2,000 will be taxed 1.1%”. NPCI and the Ministry of Finance swiftly clarified the truth: **standard bank-to-bank UPI transfers remain completely free**, and the 1.1% fee applies only to **Prepaid Payment Instrument (PPI) wallets** paying merchant QR codes.'
+      },
+      {
+        type: 'p',
+        text: 'This guide explains how wallet interoperability works on the UPI network, who pays the interchange, and how it differs from the standard 2026 P2M MDR framework.'
+      },
+      { type: 'h2', text: 'What is a PPI on UPI?' },
+      {
+        type: 'p',
+        text: 'A Prepaid Payment Instrument (PPI) is an account where you load money before spending it. Common examples in India include:'
+      },
+      {
+        type: 'ul',
+        items: [
+          '**Paytm Wallet**, **PhonePe Wallet**, and **Amazon Pay Wallet**',
+          '**Mobikwik Wallet** and **Freecharge Wallet**',
+          '**Corporate meal cards and gift vouchers** (such as Sodexo/Pluxee and Zaggle)'
+        ]
+      },
+      {
+        type: 'p',
+        text: 'Historically, a Paytm Wallet balance could only be spent at merchants with a Paytm QR. In 2023, NPCI enabled **wallet interoperability**: anyone with a verified PPI wallet can scan *any* interoperable Bharat QR or UPI QR code from any competing provider.'
+      },
+      { type: 'h2', text: 'The 1.1% Interchange Fee Structure' },
+      {
+        type: 'p',
+        text: 'When a customer pays a merchant using their wallet balance, the wallet provider must transfer funds to the merchant’s acquiring bank. To compensate the wallet issuer for holding funds, maintaining KYC, and loading costs, NPCI instituted a tiered interchange fee for transactions exceeding ₹2,000.'
+      },
+      {
+        type: 'table',
+        caption: 'Interchange fee caps for PPI transactions above ₹2,000 by merchant category.',
+        headers: ['Merchant Category', 'Interchange Rate', 'Exemption Threshold', 'Typical Merchants'],
+        rows: [
+          ['Fuel / Petrol Pumps', '0.5%', '₹2,000', 'IOCL, HPCL, BPCL stations'],
+          ['Telecom & Utilities', '0.7%', '₹2,000', 'Electricity, water, piped gas, mobile recharges'],
+          ['Supermarkets & Grocery', '0.9%', '₹2,000', 'Large grocery stores and hypermarkets'],
+          ['Standard Retail & Dining', '1.1%', '₹2,000', 'Restaurants, apparel, electronics, general retail'],
+          ['Agriculture & Kiranas', '0.0% / Exempt', '₹2,000', 'Farmer produce, small neighborhood grocers']
+        ]
+      },
+      { type: 'h2', text: 'Does a Customer Pay 1.1%?' },
+      {
+        type: 'p',
+        text: 'No. **Customers never pay interchange fees** when scanning a UPI QR code and choosing their wallet balance. The interchange fee is a merchant-side settlement deduction handled between the acquiring bank and wallet issuer.'
+      },
+      {
+        type: 'p',
+        text: 'However, customers should note that while *spending* wallet balance at merchant QRs is free, some wallet providers charge convenience fees (typically 1.5% to 2.5%) when a customer loads their wallet using a credit card.'
+      },
+      { type: 'h2', text: 'PPI Interchange vs Standard 2026 UPI MDR' },
+      {
+        type: 'p',
+        text: 'It is important not to confuse the 1.1% PPI wallet interchange with the 2026 P2M MDR framework. Standard UPI payments (where money flows directly from your savings bank account) are capped at 0.4% above ₹2,000. PPI wallet payments carry higher interchange (up to 1.1%) because maintaining non-bank wallet reserves incurs different cost structures.'
+      }
+    ],
+    faqs: [
+      {
+        q: 'Are payments below ₹2,000 charged any PPI interchange?',
+        a: 'No. Transactions of ₹2,000 or less made via PPI wallets on merchant QRs have zero interchange fee.'
+      },
+      {
+        q: 'Can I transfer wallet balance to a friend’s bank account for free?',
+        a: 'Peer-to-peer wallet-to-bank transfers are subject to the specific wallet provider’s terms and may carry nominal cash-out fees unless the wallet is full-KYC verified.'
+      },
+      {
+        q: 'What is the wallet loading interchange fee?',
+        a: 'Wallet issuers pay approximately 0.15% to remitter banks when customers load their wallets from bank accounts via net banking or UPI.'
+      },
+      {
+        q: 'Do P2P personal transfers between friends use PPI interchange?',
+        a: 'No. Person-to-person bank transfers do not involve wallets or interchange and are 100% free of charge.'
+      }
+    ],
+    sources: [
+      {
+        label: 'NPCI: Circular on Interchange Fee for PPI Interoperable Transactions',
+        href: 'https://www.npci.org.in/what-we-do/upi/circulars'
+      },
+      {
+        label: 'Ministry of Finance: Clarification on UPI Fees and Charges',
+        href: 'https://pib.gov.in/PressReleasePage.aspx?PRID=1911475'
+      }
+    ]
+  },
+  {
+    slug: 'upi-daily-transaction-limits-2026',
+    title: 'UPI Daily Transaction Limits in 2026: Bank Caps, Tax, Hospital & IPO Rules',
+    metaTitle: 'UPI Daily Transaction Limits in 2026: P2P, P2M, Tax & Bank Caps',
+    description:
+      'Complete directory of UPI transaction limits in 2026: standard ₹1 Lakh daily cap, ₹2 Lakh for capital markets, ₹5 Lakh for hospitals, schools and taxes, and bank caps.',
+    category: 'UPI limits & rules',
+    publishedAt: '2026-10-27',
+    updatedAt: '2026-11-09',
+    readingMinutes: 11,
+    takeaways: [
+      'The standard NPCI per-transaction limit for general peer-to-peer (P2P) transfers is ₹1,00,000 per 24 hours.',
+      'The Reserve Bank of India has expanded the per-transaction limit to ₹5,00,000 for hospitals, educational institutions, direct tax payments, and IPO subscriptions.',
+      'Most banks restrict users to a maximum of 20 UPI transactions per bank account per rolling 24-hour cycle.',
+      'New UPI registrations and PIN resets have an initial 24-hour safety cooling limit of ₹5,000 across all apps.'
+    ],
+    blocks: [
+      {
+        type: 'p',
+        text: 'The Unified Payments Interface (UPI) processes more than 16 billion transactions each month across India. To safeguard users against fraud, unauthorized high-value debits, and account compromises, the **National Payments Corporation of India (NPCI)** and the **Reserve Bank of India (RBI)** enforce tiered daily transaction limits.'
+      },
+      {
+        type: 'p',
+        text: 'Knowing these limits is essential when planning large payments, splitting bills, paying taxes, or making hospital payments.'
+      },
+      { type: 'h2', text: 'Category-Wise UPI Transaction Limits (2026 Framework)' },
+      {
+        type: 'p',
+        text: 'NPCI categorizes limits based on the nature of the payee and the level of verification associated with the recipient merchant category code (MCC):'
+      },
+      {
+        type: 'table',
+        caption: 'Official NPCI & RBI category limits for UPI transactions (2026).',
+        headers: ['Transaction Type / Category', 'Per-Transaction Limit', 'Daily 24h Ceiling', 'Notes & Circulars'],
+        rows: [
+          ['Standard P2P (Peer-to-Peer)', '₹1,00,000', '₹1,00,000', 'Default limit across all banks'],
+          ['General Retail Merchants (P2M)', '₹1,00,000 to ₹2,00,000', '₹2,00,000', 'Subject to acquiring bank tier'],
+          ['Capital Markets & Mutual Funds', '₹2,00,000', '₹2,00,000', 'Stock broking, AMC investments'],
+          ['Insurance Premium Payments', '₹2,00,000', '₹2,00,000', 'LIC, private life & health insurers'],
+          ['Hospitals & Medical Care', '₹5,00,000', '₹5,00,000', 'RBI enhanced limit for healthcare MCC'],
+          ['Educational Institutions & Colleges', '₹5,00,000', '₹5,00,000', 'University & school tuition fees'],
+          ['Direct Tax Payments (CBDT / GSTN)', '₹5,00,000', '₹5,00,000', 'Income Tax, Advance Tax & GST'],
+          ['IPO Bids & RBI Retail Direct', '₹5,00,000', '₹5,00,000', 'Primary market equity & G-Sec bids']
+        ]
+      },
+      { type: 'h2', text: 'Major Bank-Specific Daily UPI Limits' },
+      {
+        type: 'p',
+        text: 'While NPCI sets the outer boundary, individual remitter banks have the autonomy to establish stricter internal limits based on risk profiling and account types:'
+      },
+      {
+        type: 'table',
+        caption: 'Daily UPI limits enforced by major Indian commercial banks.',
+        headers: ['Bank Name', 'Daily Amount Limit', 'Max Transactions / Day', 'Cooling Period Limit'],
+        rows: [
+          ['State Bank of India (SBI)', '₹1,00,000', '20 transactions', '₹5,000 first 24h'],
+          ['HDFC Bank', '₹1,00,000', '20 transactions', '₹5,000 first 24h'],
+          ['ICICI Bank', '₹1,00,000', '10 to 20 transactions', '₹5,000 first 24h'],
+          ['Axis Bank', '₹1,00,000', '20 transactions', '₹5,000 first 24h'],
+          ['Punjab National Bank (PNB)', '₹25,000 to ₹1,00,000', '15 transactions', '₹5,000 first 24h'],
+          ['Bank of Baroda', '₹50,000 to ₹1,00,000', '20 transactions', '₹5,000 first 24h'],
+          ['Kotak Mahindra Bank', '₹1,00,000', '20 transactions', '₹5,000 first 24h']
+        ]
+      },
+      { type: 'h2', text: 'The 24-Hour Cooling Period Rule' },
+      {
+        type: 'p',
+        text: 'If you register on a new UPI app (e.g. downloading Google Pay onto a new smartphone) or reset your UPI PIN using your debit card or Aadhaar OTP, NPCI enforces a **24-hour security cooling period**. During these initial 24 hours, you can transfer a maximum of **₹5,000** in aggregate.'
+      },
+      {
+        type: 'p',
+        text: 'This cooling restriction exists to prevent unauthorized account draining if a fraudster SIM-swaps your phone or accesses your banking credentials.'
+      },
+      { type: 'h2', text: 'How Splitting High-Value Transactions Interacts with Daily Limits' },
+      {
+        type: 'p',
+        text: 'When making a major purchase (such as a piece of jewelry, electronics, or medical procedure costing ₹75,000), a single payment can exhaust your bank’s single-transaction ceiling. Splitting into installments (e.g. 3 installments of ₹25,000 across 2 bank accounts or card/bank splits) helps ensure payment approvals while remaining well within both daily caps and the ₹2,000 MDR thresholds.'
+      }
+    ],
+    faqs: [
+      {
+        q: 'Can I increase my daily UPI limit beyond ₹1,00,000?',
+        a: 'For peer-to-peer transfers, no. The ₹1,00,000 ceiling is mandated by NPCI. For specialized payments (hospital bills, taxes, education), verified merchants can accept up to ₹5,00,000 automatically.'
+      },
+      {
+        q: 'What is the limit for UPI Lite offline payments?',
+        a: 'UPI Lite allows PIN-less wallet payments up to ₹500 per transaction, with a maximum wallet balance of ₹2,000 at any time.'
+      },
+      {
+        q: 'Does the daily 20-transaction count include failed attempts?',
+        a: 'In most banks, failed transactions due to wrong PIN or insufficient funds still count toward your daily 20-transaction limit to deter automated brute-force attacks.'
+      },
+      {
+        q: 'How does the limit work if I have multiple UPI apps for the same bank?',
+        a: 'The limit is enforced at the **bank account level**, not the app level. Spending ₹60,000 on PhonePe and ₹40,000 on Google Pay from the same SBI account exhausts your full daily ₹1,00,000 cap.'
+      }
+    ],
+    sources: [
+      {
+        label: 'NPCI: Unified Payments Interface Limits & Guidelines',
+        href: 'https://www.npci.org.in/what-we-do/upi/limits-guidelines'
+      },
+      {
+        label: 'RBI: Enhancement of Limits for Specific UPI Categories to ₹5 Lakh',
+        href: 'https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx'
+      }
+    ]
   }
 ];
 

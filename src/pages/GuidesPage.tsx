@@ -63,7 +63,7 @@ export const GuidesPage = () => {
               <span className="h-3 w-px bg-line" aria-hidden="true" />
               <span>Sources linked in every guide</span>
               <span className="h-3 w-px bg-line" aria-hidden="true" />
-              <span>Updated October 2026</span>
+              <span>Updated November 2026</span>
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@ export const GuidesPage = () => {
               Start with the question you have
             </h2>
             <p className="mt-1.5 text-sm text-muted">
-              Six practical guides, arranged from the basics to safer payments.
+              {GUIDES.length} in-depth guides covering MDR rules, small merchants, RuPay credit cards, soundboxes, wallets and daily transaction limits.
             </p>
           </div>
           <p className="text-xs font-medium text-muted-soft">

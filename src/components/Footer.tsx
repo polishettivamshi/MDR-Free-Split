@@ -14,9 +14,10 @@ import {
 import { DisclaimerNotice } from './DisclaimerNotice';
 
 const FOOTER_LINKS = [
-  { label: 'Scan & Split', href: '/split', icon: QrCode },
-  { label: 'Overview', href: '/', icon: Layers },
-  { label: 'Guides', href: '/guides', icon: BookOpen },
+  { label: 'MDR & Split Calculator', href: '/#calculator-section', icon: Layers },
+  { label: 'Small Merchant Tier Tool', href: '/#p2pm-tool', icon: Layers },
+  { label: 'Scan & Split QR', href: '/split', icon: QrCode },
+  { label: 'All UPI Guides (10)', href: '/guides', icon: BookOpen },
   {
     label: 'How It Works',
     href: '/guides/how-mdr-free-split-works',

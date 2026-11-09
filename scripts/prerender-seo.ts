@@ -572,16 +572,61 @@ function fallbackShell(content: string): string {
 function renderFallback(route: RouteDefinition): string {
   if (route.path === '/') {
     return fallbackShell(`
-      <h1>Split your UPI payment into planned installments.</h1>
-      <p>${renderInline(SITE_DESCRIPTION)}</p>
-      <p><a href="/split">Create a UPI split plan</a> · <a href="/guides">Browse UPI MDR guides</a></p>
-      <h2>Popular UPI guides</h2>
-      <ul>${GUIDES.slice(0, 3)
-        .map(
-          (guide) =>
-            `<li><a href="/guides/${guide.slug}">${escapeHtml(guide.title)}</a> — ${escapeHtml(guide.description)}</li>`
-        )
-        .join('')}</ul>
+      <h1>UPI MDR Calculator &amp; Split Payment Planner</h1>
+      <p class="lead">${renderInline(SITE_DESCRIPTION)}</p>
+      
+      <h2>Interactive UPI MDR &amp; Split Payment Tools</h2>
+      <p>MDR Free Split provides free, transparent arithmetic calculators for payers and merchants across India. Use the tools below to calculate charges, check exemptions, and plan installment payments:</p>
+      <ul>
+        <li><strong>Interactive MDR Calculator</strong>: Check base MDR and 18% GST across standard retail (0.4%), essential sectors (flat ₹5), capital markets (0.02%), RuPay credit cards on UPI (2%), and prepaid wallets (1.1%).</li>
+        <li><strong>Small Merchant (P2PM) Simulator</strong>: Verify whether your business receipts fall below the ₹1 Lakh per month threshold to qualify for 0% MDR.</li>
+        <li><strong>Merchant QR Scanner &amp; Split Planner</strong>: Divide an invoice into equal or threshold-optimized installments to pay through PhonePe, Google Pay, Paytm, or BHIM.</li>
+      </ul>
+      <p><a href="/split">Open the Merchant QR Split Planner</a> · <a href="/#calculator-section">Use the Interactive MDR Calculator</a> · <a href="/guides">Browse all UPI Guides</a></p>
+
+      <h2>How UPI MDR Works: The ₹2,000 Threshold &amp; 2026 Rules</h2>
+      <p>The merchant discount rate (MDR) is the commercial fee a merchant pays to their acquiring bank to accept digital payments. It is not an additional surcharge charged to the customer at the time of payment.</p>
+      <figure>
+        <table>
+          <thead>
+            <tr>
+              <th>Transaction Amount</th>
+              <th>Base MDR</th>
+              <th>Applicable Rate &amp; Rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>₹1,500</td><td>₹0</td><td>At or below the ₹2,000 per-transaction threshold (0% Base MDR)</td></tr>
+            <tr><td>₹2,000</td><td>₹0</td><td>Threshold inclusive: exactly ₹2,000 remains 0% Base MDR</td></tr>
+            <tr><td>₹3,500</td><td>₹14</td><td>0.4% standard P2M MDR (plus 18% GST on bank invoice)</td></tr>
+            <tr><td>₹6,000</td><td>₹24</td><td>0.4% standard P2M MDR (or ₹0 if split into 3 x ₹2,000)</td></tr>
+            <tr><td>₹15,000</td><td>₹60</td><td>0.4% standard P2M MDR</td></tr>
+            <tr><td>₹75,000+</td><td>₹300</td><td>Per-transaction cap of ₹300 applies from ₹75,000 onwards</td></tr>
+          </tbody>
+        </table>
+        <figcaption>Illustrative MDR calculations under the notified 2026 P2M framework (excluding GST).</figcaption>
+      </figure>
+
+      <h2>Special Categories &amp; Payment Methods</h2>
+      <ul>
+        <li><strong>Small Merchants (P2PM)</strong>: Micro-merchants receiving under ₹1,00,000 per month into personal accounts enjoy 0% MDR.</li>
+        <li><strong>RuPay Credit Cards on UPI</strong>: Transactions up to ₹2,000 are free for small merchants; standard interchange applies above ₹2,000.</li>
+        <li><strong>Prepaid Wallets (PPI)</strong>: Transactions above ₹2,000 carry an interchange fee up to 1.1% paid by the acquirer.</li>
+        <li><strong>Person-to-Person (P2P)</strong>: Transfers between friends and family remain 100% free of charge.</li>
+      </ul>
+
+      <h2>Comprehensive UPI Knowledge Library</h2>
+      <p>Explore our source-linked guides on the 2026 MDR framework, merchant operations, soundbox subscriptions, and payment safety:</p>
+      <ul>${GUIDES.map(
+        (guide) =>
+          `<li><strong><a href="/guides/${guide.slug}">${escapeHtml(guide.title)}</a></strong> (${guide.readingMinutes} min read) — ${escapeHtml(guide.description)}</li>`
+      ).join('')}</ul>
+
+      <h2>Frequently Asked Questions</h2>
+      ${HOME_FAQS.map(
+        (faq) =>
+          `<h3>${escapeHtml(faq.q)}</h3><p>${renderInline(faq.a)}</p>`
+      ).join('')}
     `);
   }
 
@@ -738,6 +783,8 @@ ${sitemapEntries}
 `;
 
 fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap, 'utf8');
+const publicSitemap = path.join(rootDir, 'public', 'sitemap.xml');
+fs.writeFileSync(publicSitemap, sitemap, 'utf8');
 
 const generatedHtmlFiles = [
   'index.html',

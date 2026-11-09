@@ -22,7 +22,15 @@ import {
 import type { SplitPlan } from './types';
 
 export default function App() {
-  const [route] = useState(parseCurrentRoute);
+  const [route, setRoute] = useState(parseCurrentRoute);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(parseCurrentRoute());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [recentPlans] = useState<SplitPlan[]>(() =>
     localStore
       .getPlans()

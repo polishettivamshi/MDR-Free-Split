@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   BookOpen,
+  Calculator,
   ChevronRight,
   Info,
   Layers,
@@ -19,6 +20,12 @@ const NAV_LINKS = [
     label: 'Overview',
     icon: Layers,
     description: 'How the calculator works'
+  },
+  {
+    path: '/#calculator-section',
+    label: 'Calculator',
+    icon: Calculator,
+    description: 'Interactive UPI MDR simulator'
   },
   {
     path: '/guides',
